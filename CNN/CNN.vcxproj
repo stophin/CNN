@@ -80,7 +80,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\MultiLinkList.h" />
-    <ClInclude Include="flatform\EPaint.h" />
     <ClInclude Include="platform\ELibrary.h" />
   </ItemGroup>
   <ItemGroup>

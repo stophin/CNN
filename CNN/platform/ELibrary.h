@@ -14,6 +14,8 @@
 #include <tchar.h>
 #include <conio.h>
 
+#include <math.h>
+
 #define getch _getch
 
 #endif	//end of _ELIBRARY_H_

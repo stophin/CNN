@@ -27,9 +27,6 @@
     <ClInclude Include="common\MultiLinkList.h">
       <Filter>头文件\common</Filter>
     </ClInclude>
-    <ClInclude Include="flatform\EPaint.h">
-      <Filter>头文件\platform</Filter>
-    </ClInclude>
     <ClInclude Include="platform\ELibrary.h">
       <Filter>头文件\platform</Filter>
     </ClInclude>

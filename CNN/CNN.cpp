@@ -27,7 +27,7 @@ public:
 	EFTYPE weight;
 
 	// for multilinklist
-#define Connector_Size 3
+#define Connector_Size 5
 	INT uniqueID;
 	Connector * prev[Connector_Size];
 	Connector * next[Connector_Size];
@@ -136,6 +136,7 @@ public:
 				_neural = layer.neurals.link;
 				if (_neural) {
 					do {
+						//initialized weight is 0
 						Connector * conn = new Connector(0);
 						conn->back = neural;
 						conn->forw = _neural;
@@ -154,12 +155,13 @@ public:
 	void getOutput() {
 		Neural * neural = this->neurals.link;
 		if (neural) {
-			INT c = 0;
 			do {
+				INT c = 0;
 				EFTYPE t = 0;
 				Connector * conn = neural->conn.link;
 				if (conn) {
 					do {
+						//for all neural that links before this neural
 						if (conn->forw == neural) {
 							Neural * _neural = conn->back;
 							if (_neural) {
@@ -172,10 +174,12 @@ public:
 					} while (conn && conn != neural->conn.link);
 				}
 				if (c > 0) {
+					//formula:
+					//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+					//OUTPUT(i) = F(NET(i))
 					//bias
 					t += neural->bias;
-
-					t = sigmod(t);
+					t = eva_fun(t);
 				}
 				else {
 					//input layer
@@ -191,12 +195,13 @@ public:
 	void getDelta() {
 		Neural * neural = this->neurals.link;
 		if (neural) {
-			INT c = 0;
 			do {
+				INT c = 0;
 				EFTYPE t = 0;
 				Connector * conn = neural->conn.link;
 				if (conn) {
 					do {
+						//for all neurals that links after this neural
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
@@ -209,11 +214,16 @@ public:
 					} while (conn && conn != neural->conn.link);
 				}
 				if (c > 0) {
-					t = t * sigmod_1(neural->output);
+					//formula:
+					//delta[ki] = SUM[j=0~n-1](delta[ij] * w[ij] * F_1(S[i]))
+					// F_1(S[i]) will be multipied in here
+					t = t * eva_fun_1(neural->output);
 				}
 				else {
 					//output layer
-					t = (neural->output - neural->value) * sigmod_1(neural->output);
+					//formula:
+					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
+					t = (neural->output - neural->value) * eva_fun_1(neural->output);
 				}
 				neural->delta = t;
 
@@ -226,14 +236,17 @@ public:
 	void adjustWeight() {
 		Neural * neural = this->neurals.link;
 		if (neural) {
-			INT c = 0;
 			do {
+				INT c = 0;
 				Connector * conn = neural->conn.link;
 				if (conn) {
 					do {
+						//for all the neurals that links after this neural
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
+								//formula:
+								//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
 								conn->weight -= ETA_W * _neural->delta * neural->output;
 							}
 							c++;
@@ -258,6 +271,8 @@ public:
 		if (neural) {
 			INT c = 0;
 			do {
+				//formula:
+				//b[j] = b[j] - lamda2 * delta[ij]
 				neural->bias -= ETA_B * neural->delta;
 
 				neural = this->neurals.next(neural);
@@ -269,6 +284,7 @@ public:
 		Neural * neural = this->neurals.link;
 		EFTYPE ans = 0;
 		if (neural) {
+			INT c = 0;
 			do {
 				ans += 0.5 * (neural->output - neural->value) * (neural->output - neural->value);
 
@@ -279,8 +295,14 @@ public:
 		return ans;
 	}
 
+	EFTYPE eva_fun(EFTYPE x) {
+		return sigmod(x);
+	}
+	EFTYPE eva_fun_1(EFTYPE S) {
+		return sigmod_1(S);
+	}
 #define A        30.0
-#define B        10.0 //A和B是S型函数的参数
+#define B        10.0 //A和B是激活函数的参数
 	EFTYPE sigmod(EFTYPE x) {
 		return A / (1 + exp(-x / B));
 	}
@@ -288,48 +310,190 @@ public:
 	EFTYPE sigmod_1(EFTYPE S) {
 		return S * (A - S) / (A * B);
 	}
+
+	EFTYPE atanh(EFTYPE x) {
+		return  A * atan(x);
+	}
+	EFTYPE atanh_1(EFTYPE S) {
+		return 1 / (S * S + 1) / B;
+	}
+
+	// for multilinklist
+#define Layer_Size 2
+	INT uniqueID;
+	Layer * prev[Layer_Size];
+	Layer * next[Layer_Size];
+	void operator delete(void * _ptr){
+		if (_ptr == NULL)
+		{
+			return;
+		}
+		for (INT i = 0; i < Layer_Size; i++)
+		{
+			if (((Layer*)_ptr)->prev[i] != NULL || ((Layer*)_ptr)->next[i] != NULL)
+			{
+				return;
+			}
+		}
+		delete(_ptr);
+	}
 };
 
 class Network {
 public:
-	Network(){
+	Network() :
+		hiddens(0),
+		layers(1),
+		input(*(new Layer())),
+		output(*(new Layer())){
+		layers.insertLink(&input);
+		layers.insertLink(&output);
 	}
 	~Network() {
+		hiddens.~MultiLinkList();
+		layers.~MultiLinkList();
 	}
 
-	Layer input;
-	Layer hidden;
-	Layer output;
+	Layer &input;
+	Layer &output;
+	MultiLinkList<Layer> hiddens;
+	MultiLinkList<Layer> layers;
 
 #define T_ERROR	0.002//单个样本允许的误差
 	void Train() {
+		printf("Target:");
+		Neural * neural = input.neurals.link;
+		if (neural) {
+			do {
+
+				printf("%.2f ", neural->value);
+
+				neural = input.neurals.next(neural);
+			} while (neural && neural != input.neurals.link);
+		}
+		printf("->");
+		neural = output.neurals.link;
+		if (neural) {
+			do {
+
+				printf("%.2f ", neural->value);
+
+				neural = output.neurals.next(neural);
+			} while (neural && neural != output.neurals.link);
+		}
+		printf("\n");
+
+
 		INT count = 0;
-		while (count < 1000) {
+		EFTYPE error;
+		while (count < 10000) {
+			ForwardTransfer();
 
-			input.getOutput();
-			hidden.getOutput();
-			output.getOutput();
-
-			EFTYPE error = output.getError();
+			error = output.getError();
 			if (error < T_ERROR) {
 				break;
 			}
-			printf("[%5d]Error is: %f\n", count++, error);
+			neural = output.neurals.link;
+			if (neural) {
+				do {
 
-			output.getDelta();
-			hidden.getDelta();
+					printf("%.2f->", neural->output);
 
-			output.adjustBias();
-			hidden.adjustWeight();
-			hidden.adjustBias();
-			input.adjustWeight();
+					neural = output.neurals.next(neural);
+				} while (neural && neural != output.neurals.link);
+			}
+			printf("[%5d]Error is: %f\n", count, error);
+			count++;
+
+			ReverseTrasfer();
 		}
+
+		printf("Target:");
+		neural = input.neurals.link;
+		if (neural) {
+			do {
+
+				printf("%.2f ", neural->value);
+
+				neural = input.neurals.next(neural);
+			} while (neural && neural != input.neurals.link);
+		}
+		printf("->");
+		neural = output.neurals.link;
+		if (neural) {
+			do {
+
+				printf("%.2f ", neural->value);
+
+				neural = output.neurals.next(neural);
+			} while (neural && neural != output.neurals.link);
+		}
+		printf("\n");
+		printf("Result:");
+		neural = output.neurals.link;
+		if (neural) {
+			do {
+
+				printf("%.2f ", neural->output);
+
+				neural = output.neurals.next(neural);
+			} while (neural && neural != output.neurals.link);
+		}
+		printf("\n");
+		printf("[%5d]Error is: %f\n", count, error);
+	}
+
+	void ForwardTransfer() {
+		input.getOutput();
+		Layer * hidden = this->hiddens.link;
+		if (hidden) {
+			do {
+				hidden->getOutput();
+
+				hidden = this->hiddens.next(hidden);
+			} while (hidden && hidden != this->hiddens.link);
+		}
+		output.getOutput();
+	}
+
+	void ReverseTrasfer(){
+		GetDelta();
+		UpdateNetwork();
+	}
+
+	void GetDelta() {
+		output.getDelta();
+		Layer * _hidden = this->hiddens.prev(this->hiddens.link);
+		Layer * hidden = _hidden;
+		if (hidden) {
+			do {
+				hidden->getDelta();
+
+				hidden = this->hiddens.prev(hidden);
+			} while (hidden && hidden != _hidden);
+		}
+	}
+
+	void UpdateNetwork() {
+		output.adjustBias();
+		Layer * _hidden = this->hiddens.prev(this->hiddens.link);
+		Layer * hidden = _hidden;
+		if (hidden) {
+			do {
+				hidden->adjustWeight();
+				hidden->adjustBias();
+
+				hidden = this->hiddens.prev(hidden);
+			} while (hidden && hidden != _hidden);
+		}
+		input.adjustWeight();
 	}
 
 	void Forecast(Layer& in) {
 		if (input.neurals.linkcount != in.neurals.linkcount) {
 			return;
 		}
+		//exchange values
 		Layer temp;
 		Neural * neural = input.neurals.link;
 		Neural * _neural = in.neurals.link;
@@ -346,10 +510,9 @@ public:
 					_neural && _neural != in.neurals.link);
 		}
 
-		input.getOutput();
-		hidden.getOutput();
-		output.getOutput();
+		ForwardTransfer();
 
+		//output
 		neural = output.neurals.link;
 		if (neural) {
 			do {
@@ -358,14 +521,17 @@ public:
 				neural = output.neurals.next(neural);
 			} while (neural && neural != output.neurals.link);
 		}
+		printf("\n");
 
-		//restore
+		//restore values
 		neural = input.neurals.link;
 		_neural = in.neurals.link;
 		if (neural) {
 			do {
 
+				EFTYPE temp = neural->value;
 				neural->value = _neural->value;
+				_neural->value = temp;
 
 				_neural = in.neurals.next(_neural);
 				neural = input.neurals.next(neural);
@@ -377,7 +543,7 @@ public:
 
 	void Traverse() {
 		//Test
-		Neural * neural = this->output.neurals.link;
+		Neural * neural = this->input.neurals.link;
 		if (neural) {
 			do {
 
@@ -387,16 +553,16 @@ public:
 				if (conn) {
 					do {
 
-						if (conn->forw == neural) {
-							Neural * _neural = conn->back;
+						if (conn->back == neural) {
+							Neural * _neural = conn->forw;
 							if (_neural) {
 								printf("%.2f(%.2f, %.2f)-->", _neural->delta, _neural->delta, conn->weight);
 
 								Connector * _conn = _neural->conn.link;
 								if (_conn) {
 									do {
-										if (_conn->forw == _neural) {
-											Neural * __neural = _conn->back;
+										if (_conn->back == _neural) {
+											Neural * __neural = _conn->forw;
 											if (__neural) {
 												printf("%.2f(%.2f)->", __neural->value, _conn->weight);
 											}
@@ -414,8 +580,8 @@ public:
 				}
 				printf("\n");
 
-				neural = this->output.neurals.next(neural);
-			} while (neural && neural != this->output.neurals.link);
+				neural = this->input.neurals.next(neural);
+			} while (neural && neural != this->input.neurals.link);
 		}
 	}
 };
@@ -465,46 +631,139 @@ EFTYPE sample[41][4] =
 	{ 1, 5, 3, 5.724 }
 };
 
+EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
+	return x + y + z;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
+	INT i, j;
 
 	Network nets;
 
 #define WEIGHT	0
-#define BIAS	-1
+#define BIAS	0//初始化权值和阀值为0，也可以初始化随机值
 	nets.input.addNeural(1);
 	nets.input.addNeural(2);
 	nets.input.addNeural(3);
 
-	nets.hidden.addNeural(4, BIAS);
-	nets.hidden.addNeural(5, BIAS);
-	nets.hidden.addNeural(6, BIAS);
-
 	nets.output.addNeural(1, BIAS);
 
-	nets.input.makeConnection(nets.hidden, 1);
-	nets.hidden.makeConnection(nets.output, 2);
+	for (i = 0; i < 1; i++) {
+		Layer * hidden = new Layer();
+		
+		//formula of perfect hidden num:
+		//sqrt(in_num + out_num) + a
+		hidden->addNeural(1 + (i + 1) * 1000, BIAS);
+		hidden->addNeural(2 + (i + 1) * 1000, BIAS);
+		hidden->addNeural(3 + (i + 1) * 1000, BIAS);
+		hidden->addNeural(4 + (i + 1) * 1000, BIAS);
+		hidden->addNeural(5 + (i + 1) * 1000, BIAS);
+		hidden->addNeural(6 + (i + 1) * 1000, BIAS);
+		hidden->addNeural(7 + (i + 1) * 1000, BIAS);
 
+		nets.hiddens.insertLink(hidden);
+		nets.layers.insertLink(hidden, &nets.output, NULL);
+
+		hidden = nets.layers.link;
+		if (hidden) {
+			Layer * _hidden = nets.layers.next(hidden);
+			if (_hidden && _hidden != nets.layers.link) {
+				do {
+
+					printf("%p, %p->", hidden, _hidden);
+
+					hidden = _hidden;
+					_hidden = nets.layers.next(_hidden);
+				} while (_hidden && _hidden != nets.layers.link);
+				printf("\n");
+			}
+		}
+
+		hidden = nets.hiddens.link;
+		if (hidden) {
+			do {
+
+				printf("%p=>", hidden);
+
+				hidden = nets.hiddens.next(hidden);
+			} while (hidden && hidden != nets.hiddens.link);
+			printf("\n");
+		}
+	}
+
+	Layer * hidden = nets.layers.link;
+	if (hidden) {
+		i = 0;
+		Layer * _hidden = nets.layers.next(hidden);
+		if (_hidden && _hidden != nets.layers.link) {
+			do {
+
+				hidden->makeConnection(*_hidden, ++i);
+
+				hidden = _hidden;
+				_hidden = nets.layers.next(_hidden);
+			} while (_hidden && _hidden != nets.layers.link);
+		}
+	}
 
 	nets.Traverse();
 
-	for (int i = 0; i < 41; i++) {
-		nets.input.setNeural(sample[i], 3);
-		nets.output.setNeural(sample[i] + 3, 1);
+	getch();
 
-		nets.Train();
-	}
-
-	EFTYPE temp[] = { 5, 1, 4 };
 	Layer input;
 	input.addNeural(1);
 	input.addNeural(2);
 	input.addNeural(3);
 
-	input.setNeural(temp, 3);
-	nets.Forecast(input);
+	EFTYPE temp[] = { 1, 5, 2, 10 };
+	for (i = 0; i < 10000; i++) {
+		printf("Training: %d\n", i + 1);
+		//nets.input.setNeural(sample[i], 3);
+		//nets.output.setNeural(sample[i] + 3, 1);
+		temp[0] = (EFTYPE)(rand() % 10) + 1;
+		temp[1] = (EFTYPE)(rand() % 10) + 1;
+		temp[2] = (EFTYPE)(rand() % 10) + 1;
+		temp[3] = train_sample(temp[0], temp[1], temp[2]);
+		nets.input.setNeural(temp, 3);
+		nets.output.setNeural(temp + 3, 1);
 
-	getch();
+		nets.Train();
+
+		if (kbhit()) {
+			while (1) {
+				for (j = 0; j < 3; j++){
+					scanf("%f", &temp[j]);
+					if (ISZERO(temp[j])) {
+						break;
+					}
+				}
+				if (j < 3) {
+					break;
+				}
+
+				input.setNeural(temp, 3);
+				nets.Forecast(input);
+			}
+		}
+	}
+
+
+	while (1) {
+		for (j = 0; j < 3; j++){
+			scanf("%f", &temp[j]);
+			if (ISZERO(temp[j])) {
+				break;
+			}
+		}
+		if (j < 3) {
+			break;
+		}
+
+		input.setNeural(temp, 3);
+		nets.Forecast(input);
+	}
+
 	return 0;
 }
 

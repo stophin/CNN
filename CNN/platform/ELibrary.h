@@ -17,6 +17,11 @@
 #include <math.h>
 
 #define getch _getch
+#define scanf scanf_s
+#define kbhit _kbhit
+
+#define ZERO	1e-6
+#define ISZERO(x) (x > -ZERO && x < ZERO)
 
 #endif	//end of _ELIBRARY_H_
 //end of file

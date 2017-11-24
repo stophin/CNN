@@ -23,5 +23,7 @@
 #define ZERO	1e-6
 #define ISZERO(x) (x > -ZERO && x < ZERO)
 
+#define EFTYPE float
+
 #endif	//end of _ELIBRARY_H_
 //end of file

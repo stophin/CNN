@@ -80,6 +80,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common\MultiLinkList.h" />
+    <ClInclude Include="NN\CommonDefine.h" />
+    <ClInclude Include="NN\Layer.h" />
+    <ClInclude Include="NN\Network.h" />
+    <ClInclude Include="NN\Neural.h" />
     <ClInclude Include="platform\ELibrary.h" />
   </ItemGroup>
   <ItemGroup>

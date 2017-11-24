@@ -19,6 +19,9 @@
     <Filter Include="头文件\platform">
       <UniqueIdentifier>{944b54e4-4863-4e37-8369-eb0edd618ffc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="头文件\NN">
+      <UniqueIdentifier>{04371d8d-640a-4905-b55f-b1e1ce0068bc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -29,6 +32,18 @@
     </ClInclude>
     <ClInclude Include="platform\ELibrary.h">
       <Filter>头文件\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="NN\Network.h">
+      <Filter>头文件\NN</Filter>
+    </ClInclude>
+    <ClInclude Include="NN\Neural.h">
+      <Filter>头文件\NN</Filter>
+    </ClInclude>
+    <ClInclude Include="NN\Layer.h">
+      <Filter>头文件\NN</Filter>
+    </ClInclude>
+    <ClInclude Include="NN\CommonDefine.h">
+      <Filter>头文件\NN</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -150,9 +150,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	//nets.divrange = 1.0;
 	//nets.divoutrange = 1.0;
 	k = 0;
-	for (i = 0; i < 100000; i++) {
+	i = 0;
+	while(1) {
+		i++;
 		k = i % 41;
-		printf("Training: %d\n", k + 1);
 		//nets.input.setNeural(sample[k], 3);
 		//nets.output.setNeural(sample[k] + 3, 1);
 		temp[0] = (EFTYPE)(rand() % range_max) + range_min;
@@ -168,6 +169,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		nets.Train();
 
 		if (kbhit()) {
+			printf("Training: %d\n", i);
 			while (1) {
 				for (j = 0; j < 3; j++){
 					scanf("%f", &temp[j]);
@@ -183,22 +185,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				nets.Forecast(input);
 			}
 		}
-	}
-
-
-	while (1) {
-		for (j = 0; j < 3; j++){
-			scanf("%f", &temp[j]);
-			if (ISZERO(temp[j])) {
-				break;
-			}
-		}
-		if (j < 3) {
-			break;
-		}
-
-		input.setNeural(temp, 3);
-		nets.Forecast(input);
 	}
 
 	return 0;

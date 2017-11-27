@@ -84,6 +84,7 @@
     <ClInclude Include="NN\Layer.h" />
     <ClInclude Include="NN\Network.h" />
     <ClInclude Include="NN\Neural.h" />
+    <ClInclude Include="NN\Convolute.h" />
     <ClInclude Include="platform\ELibrary.h" />
   </ItemGroup>
   <ItemGroup>

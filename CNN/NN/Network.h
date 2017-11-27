@@ -110,7 +110,7 @@ public:
 
 		INT count = 0;
 		EFTYPE error;
-		while (count < 10000) {
+		while (count < 1000) {
 			ForwardTransfer();
 
 			error = output.getError();
@@ -236,7 +236,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								printf("%.2f(%.2f, %.2f)-->", _neural->delta, _neural->delta, conn->weight);
+								printf("%.2f(%.2f, %.2f)-->", _neural->value, _neural->delta, conn->weight);
 
 								Connector * _conn = _neural->conn.link;
 								if (_conn) {

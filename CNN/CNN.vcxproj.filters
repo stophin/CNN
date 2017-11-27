@@ -45,6 +45,9 @@
     <ClInclude Include="NN\CommonDefine.h">
       <Filter>头文件\NN</Filter>
     </ClInclude>
+    <ClInclude Include="NN\Convolute.h">
+      <Filter>头文件\NN</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CNN.cpp">

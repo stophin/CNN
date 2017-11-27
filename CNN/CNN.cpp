@@ -50,12 +50,14 @@ EFTYPE sample[41][4] =
 };
 
 EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
+	//return  1 / x + 1 / y + 1 / z;
+	//return x + y + z;
 	return x * y * z;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	INT i, j;
+	INT i, j, k;
 
 	Network nets;
 
@@ -67,11 +69,12 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	nets.output.addNeural(1, BIAS);
 
-	for (i = 0; i < 1; i++) {
+	for (i = 0; i < 2; i++) {
 		Layer * hidden = new Layer();
 		
 		//formula of perfect hidden num:
 		//sqrt(in_num + out_num) + a
+		//a is 5
 		hidden->addNeural(1 + (i + 1) * 1000, BIAS);
 		hidden->addNeural(2 + (i + 1) * 1000, BIAS);
 		hidden->addNeural(3 + (i + 1) * 1000, BIAS);
@@ -142,18 +145,23 @@ int _tmain(int argc, _TCHAR* argv[])
 	INT outrange_max = train_sample(range_max, range_max, range_max);
 	nets.divrange = ((EFTYPE)(range_max - range_min)) / MAX_SIMULATION_RANGE_INPUT;
 	nets.divoutrange = ((EFTYPE)(outrange_max - outrange_min)) / MAX_SIMULATION_RANGE_OUTPUT;
+	range_max = max(range_min, range_max);
+	range_min = min(range_min, range_max);
 	//nets.divrange = 1.0;
 	//nets.divoutrange = 1.0;
-	for (i = 0; i < 10000; i++) {
-		printf("Training: %d\n", i + 1);
-		//nets.input.setNeural(sample[i], 3);
-		//nets.output.setNeural(sample[i] + 3, 1);
+	k = 0;
+	for (i = 0; i < 100000; i++) {
+		k = i % 41;
+		printf("Training: %d\n", k + 1);
+		//nets.input.setNeural(sample[k], 3);
+		//nets.output.setNeural(sample[k] + 3, 1);
 		temp[0] = (EFTYPE)(rand() % range_max) + range_min;
 		temp[1] = (EFTYPE)(rand() % range_max) + range_min;
 		temp[2] = (EFTYPE)(rand() % range_max) + range_min;
-
 		temp[3] = train_sample(temp[0], temp[1], temp[2]);
 
+		//nets.input.setNeural(sample[k], 3);
+		//nets.output.setNeural(sample[k] + 3, 1);
 		nets.input.setNeural(temp, 3);
 		nets.output.setNeural(temp + 3, 1);
 

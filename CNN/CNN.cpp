@@ -55,7 +55,8 @@ EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
 	return x * y * z;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+
+int main(int argc, _TCHAR* argv[])
 {
 	INT i, j, k;
 
@@ -69,7 +70,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	nets.output.addNeural(1, BIAS);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		Layer * hidden = new Layer();
 		
 		//formula of perfect hidden num:
@@ -151,6 +152,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	//nets.divoutrange = 1.0;
 	k = 0;
 	i = 0;
+	
 	while(1) {
 		i++;
 		k = i % 41;
@@ -172,7 +174,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			printf("Training: %d\n", i);
 			while (1) {
 				for (j = 0; j < 3; j++){
-					scanf("%f", &temp[j]);
+					scanf("%lf", &temp[j]);
 					if (ISZERO(temp[j])) {
 						break;
 					}
@@ -183,10 +185,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 				input.setNeural(temp, 3);
 				nets.Forecast(input);
+				temp[3] = train_sample(temp[0], temp[1], temp[2]);
+				printf("Actual: %.2f\n", temp[3]);
 			}
 		}
 	}
-
 	return 0;
 }
 

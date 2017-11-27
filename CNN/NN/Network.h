@@ -110,7 +110,7 @@ public:
 
 		INT count = 0;
 		EFTYPE error;
-		while (count < 1000) {
+		while (count < 10000) {
 			ForwardTransfer();
 
 			error = output.getError();

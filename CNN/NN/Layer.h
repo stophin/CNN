@@ -265,7 +265,7 @@ public:
 				return;
 			}
 		}
-		delete(_ptr);
+		delete((Layer*)_ptr);
 	}
 };
 

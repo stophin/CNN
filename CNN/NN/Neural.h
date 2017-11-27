@@ -43,7 +43,7 @@ public:
 				return;
 			}
 		}
-		delete(_ptr);
+		delete((Connector*)_ptr);
 	}
 };
 
@@ -87,7 +87,7 @@ public:
 				return;
 			}
 		}
-		delete(_ptr);
+		delete((Neural*)_ptr);
 	}
 };
 

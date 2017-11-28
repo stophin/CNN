@@ -175,11 +175,8 @@ int main(int argc, _TCHAR* argv[])
 			while (1) {
 				for (j = 0; j < 3; j++){
 					scanf("%lf", &temp[j]);
-					if (ISZERO(temp[j])) {
-						break;
-					}
 				}
-				if (j < 3) {
+				if (ISZERO(temp[0]) || ISZERO(temp[1]) || ISZERO(temp[2])) {
 					break;
 				}
 
@@ -187,6 +184,9 @@ int main(int argc, _TCHAR* argv[])
 				nets.Forecast(input);
 				temp[3] = train_sample(temp[0], temp[1], temp[2]);
 				printf("Actual: %.2f\n", temp[3]);
+			}
+			if (ISZERO(temp[0]) && ISZERO(temp[1]) && ISZERO(temp[2])) {
+				break;
 			}
 		}
 	}

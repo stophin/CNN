@@ -90,8 +90,10 @@ void train_sample_index() {
 	//	g_index = 1;
 	//}
 }
+#ifdef _NANOC_WINDOWS_
 #include <float.h>
 unsigned int fp_control_state = _controlfp_s(&fp_control_state, _EM_INEXACT, _MCW_EM);
+#endif
 EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
 	return x + y + z;
 	//int _x = (int)x;

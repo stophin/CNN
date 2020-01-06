@@ -19,6 +19,6 @@
 #define ETA_W    0.0035   //权值调整率 adjustWeight
 #define ETA_B    0.001    //阀值调整率 adjustBias
 
-#define T_ERROR	0.00002		//单个样本允许的误差
+#define T_ERROR	0.0002		//单个样本允许的误差
 #define T_TIMES	10000000	//训练次数
 #endif

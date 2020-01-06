@@ -65,31 +65,40 @@ EFTYPE train_sample_output_min() {
 	return 1;
 }
 EFTYPE train_sample_output_max() {
-	//return 100;
+	//return 300;
 	return 20;
 }
 EFTYPE train_sample_input(INT index, EFTYPE range_min, EFTYPE range_max) {
-	//return sample[1][index];
-	//return (EFTYPE)(rand() % (INT)range_max) + range_min;
-	//return g_index;
 	//return g_indexM[index];
 	return sample[g_index][index];
 }
+EFTYPE train_sample_output(EFTYPE x, EFTYPE y, EFTYPE z) {
+	//return x + y + z;
+	return sample[g_index % 41][3];
+}
+void train_sample_index() {
+	//g_indexM[g_index]++;
+	if (g_indexM[g_index] >= 100) {
+		g_indexM[g_index] = 0;
+		g_index++;
+		if (g_index >= 3) {
+			g_index = 0;
+		}
+	}
+	++g_index;
+}
 
 EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
-	//return sample[1][3];
-	//return  1 / x + 1 / y + 1 / z;
-	//return x * y * z;
-	//g_indexM[g_index]++;
-	//if (g_indexM[g_index] >= 100) {
-	//	g_index++;
-	//	if (g_index >= 3) {
-	//		g_index = 0;
-	//	}
-	//}
 	//return x + y + z;
-	g_index++;
-	return sample[g_index % 41][3];
+	int _x = (int)x;
+	int _y = (int)y;
+	int _z = (int)z;
+	for (int i = 0; i < 41; i++) {
+		if (sample[i][0] == _x && sample[i][1] == _y && sample[i][2] == _z) {
+			return sample[i][3];
+		}
+	}
+	return 0;
 }
 
 int test() {
@@ -203,7 +212,8 @@ int test() {
 		temp[0] = train_sample_input(0, range_min, range_max);// (EFTYPE)(rand() % range_max) + range_min;
 		temp[1] = train_sample_input(1, range_min, range_max);// (EFTYPE)(rand() % range_max) + range_min;
 		temp[2] = train_sample_input(2, range_min, range_max);// (EFTYPE)(rand() % range_max) + range_min;
-		temp[3] = train_sample(temp[0], temp[1], temp[2]);
+		temp[3] = train_sample_output(temp[0], temp[1], temp[2]);
+		train_sample_index();
 		nets.input.setNeural(temp, 3);
 		nets.output.setNeural(temp + 3, 1);
 

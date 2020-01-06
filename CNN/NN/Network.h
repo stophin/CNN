@@ -94,7 +94,7 @@ public:
 		if (neural) {
 			do {
 
-				printf("%.2e ", neural->value * divrange);
+				printf("%e ", neural->value * divrange);
 
 				neural = input.neurals.next(neural);
 			} while (neural && neural != input.neurals.link);
@@ -104,7 +104,7 @@ public:
 		if (neural) {
 			do {
 
-				printf("%.2e ", neural->value * divoutrange);
+				printf("%e ", neural->value * divoutrange);
 
 				neural = output.neurals.next(neural);
 			} while (neural && neural != output.neurals.link);
@@ -125,7 +125,7 @@ public:
 			if (neural) {
 				do {
 
-					printf("%.2e ", neural->value * divrange);
+					printf("%e ", neural->value * divrange);
 
 					neural = input.neurals.next(neural);
 				} while (neural && neural != input.neurals.link);
@@ -134,12 +134,12 @@ public:
 			if (neural) {
 				do {
 
-					printf(" %.2e->%.2e", neural->value * divoutrange, neural->output * divoutrange);
+					printf(" %e->%e", neural->value * divoutrange, neural->output * divoutrange);
 
 					neural = output.neurals.next(neural);
 				} while (neural && neural != output.neurals.link);
 			}
-			printf("[%5d]Error is: %.2e\r", count, error);
+			printf("[%5d]Error is: %e\r", count, error);
 			count++;
 
 			ReverseTrasfer();
@@ -150,7 +150,7 @@ public:
 		if (neural) {
 			do {
 
-				printf("%.2e ", neural->value * divrange);
+				printf("%e ", neural->value * divrange);
 
 				neural = input.neurals.next(neural);
 			} while (neural && neural != input.neurals.link);
@@ -160,7 +160,7 @@ public:
 		if (neural) {
 			do {
 
-				printf("%.2e ", neural->value * divoutrange);
+				printf("%e ", neural->value * divoutrange);
 
 				neural = output.neurals.next(neural);
 			} while (neural && neural != output.neurals.link);
@@ -171,13 +171,13 @@ public:
 		if (neural) {
 			do {
 
-				printf("%.2e ", neural->output * divoutrange);
+				printf("%e ", neural->output * divoutrange);
 
 				neural = output.neurals.next(neural);
 			} while (neural && neural != output.neurals.link);
 		}
 		printf("\n");
-		printf("[%5d]Error is: %.2e\n", count, error);
+		printf("[%5d]Error is: %e\n", count, error);
 	}
 
 	void Forecast(Layer& in) {
@@ -209,7 +209,7 @@ public:
 		neural = output.neurals.link;
 		if (neural) {
 			do {
-				printf("%.2e->", neural->output * divoutrange);
+				printf("%e->", neural->output * divoutrange);
 
 				neural = output.neurals.next(neural);
 			} while (neural && neural != output.neurals.link);
@@ -240,7 +240,7 @@ public:
 		if (neural) {
 			do {
 
-				printf("%.2e--->", neural->value);
+				printf("%e--->", neural->value);
 
 				Connector * conn = neural->conn.link;
 				if (conn) {
@@ -249,7 +249,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								printf("%.2e(%.2e, %.2e)-->", _neural->value, _neural->delta, conn->weight);
+								printf("%e(%e, %e)-->", _neural->value, _neural->delta, conn->weight);
 
 								Connector * _conn = _neural->conn.link;
 								if (_conn) {
@@ -257,7 +257,7 @@ public:
 										if (_conn->back == _neural) {
 											Neural * __neural = _conn->forw;
 											if (__neural) {
-												printf("%.2e(%.2e)->", __neural->value, _conn->weight);
+												printf("%e(%e)->", __neural->value, _conn->weight);
 											}
 										}
 

@@ -235,7 +235,7 @@ int test() {
 				input.setNeural(temp, 3);
 				nets.Forecast(input);
 				temp[3] = train_sample(temp[0], temp[1], temp[2]);
-				printf("Actual: %.2e\n", temp[3]);
+				printf("Actual: %e\n", temp[3]);
 			}
 			if (ISZERO(temp[0]) && ISZERO(temp[1]) && ISZERO(temp[2])) {
 				break;

@@ -118,7 +118,7 @@ public:
 		while (count < T_TIMES) {
 			ForwardTransfer();
 
-			error = output.getError();
+			error = output.getError() * divoutrange * divoutrange;
 			if (error < T_ERROR) {
 				break;
 			}

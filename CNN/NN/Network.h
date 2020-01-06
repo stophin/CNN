@@ -65,6 +65,7 @@ public:
 
 	void UpdateNetwork() {
 		output.adjustBias();
+		output.adjustWeight();
 		Layer * _hidden = this->hiddens.prev(this->hiddens.link);
 		Layer * hidden = _hidden;
 		if (hidden) {

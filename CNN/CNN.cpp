@@ -53,52 +53,56 @@ EFTYPE sample[41][4] =
 int g_indexM[3] = { 10, 10, 10 };
 int g_index = 0;
 EFTYPE train_sample_min() {
-	//return 1;
 	return 1;
+	//return 1;
 }
 EFTYPE train_sample_max() {
-	//return 100;
-	return 5;
+	return 100;
+	//return 5;
 }
 EFTYPE train_sample_output_min() {
-	//return 1;
 	return 1;
+	//return 1;
 }
 EFTYPE train_sample_output_max() {
-	//return 300;
-	return 22;
+	return 300;
+	//return 22;
 }
 EFTYPE train_sample_input(INT index, EFTYPE range_min, EFTYPE range_max) {
-	//return g_indexM[index];
-	return sample[g_index % 41][index];
+	return g_indexM[index];
+	//return sample[g_index % 41][index];
 }
 EFTYPE train_sample_output(EFTYPE x, EFTYPE y, EFTYPE z) {
-	//return x + y + z;
-	return sample[g_index % 41][3];
+	return x + y + z;
+	//return sample[g_index % 41][3];
 }
 void train_sample_index() {
-	//g_indexM[g_index]++;
-	//if (g_indexM[g_index] >= 100) {
-	//	g_indexM[g_index] = 0;
-	//	g_index++;
-	//	if (g_index >= 3) {
-	//		g_index = 0;
-	//	}
-	//}
-	++g_index;
-}
-
-EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
-	//return x + y + z;
-	int _x = (int)x;
-	int _y = (int)y;
-	int _z = (int)z;
-	for (int i = 0; i < 41; i++) {
-		if (sample[i][0] == _x && sample[i][1] == _y && sample[i][2] == _z) {
-			return sample[i][3];
+	g_indexM[g_index]++;
+	if (g_indexM[g_index] >= 100) {
+		g_indexM[g_index] = 10;
+		g_index++;
+		if (g_index >= 3) {
+			g_index = 0;
 		}
 	}
-	return 0;
+	//++g_index;
+	//if (g_index >= 41) {
+	//	g_index = 1;
+	//}
+}
+#include <float.h>
+unsigned int fp_control_state = _controlfp_s(&fp_control_state, _EM_INEXACT, _MCW_EM);
+EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
+	return x + y + z;
+	//int _x = (int)x;
+	//int _y = (int)y;
+	//int _z = (int)z;
+	//for (int i = 0; i < 41; i++) {
+	//	if (sample[i][0] == _x && sample[i][1] == _y && sample[i][2] == _z) {
+	//		return sample[i][3];
+	//	}
+	//}
+	//return 0;
 }
 
 int test() {

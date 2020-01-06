@@ -132,7 +132,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								t += conn->weight * _neural->delta;
+								t += conn->weight * conn->delta;
 							}
 							c++;
 						}
@@ -144,17 +144,32 @@ public:
 					//formula:
 					//delta[ki] = SUM[j=0~n-1](delta[ij] * w[ij] * F_1(S[i]))
 					// F_1(S[i]) will be multipied in here
-					t = t * eva_fun_1(neural->output);
+					t = t;// *eva_fun_1(neural->output);
 					//t = t * neural->output * (1 - neural->output);
 				}
 				else {
 					//output layer
 					//formula:
 					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
-					t = (neural->output - neural->value) * eva_fun_1(neural->output);
+					t = (neural->value - neural->output) * eva_fun_1(neural->output);
 					//t = (neural->output - neural->value) * neural->output * (1 - neural->output);
 				}
 				neural->delta = t;
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all neurals that links to this neural
+						if (conn->forw == neural) {
+							Neural * _neural = conn->back;
+							if (_neural) {
+								conn->delta = neural->delta;// *eva_fun_1(_neural->output);//*_nerual->output;
+							}
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
 
 				neural = this->neurals.next(neural);
 			} while (neural && neural != this->neurals.link);
@@ -175,7 +190,7 @@ public:
 							if (_neural) {
 								//formula:
 								//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
-								conn->weight -= ETA_W * _neural->delta * neural->output;
+								conn->weight += ETA_W * conn->delta * neural->output * eva_fun_1(_neural->output);//_neural->delta * neural->output;
 							}
 							c++;
 						}
@@ -187,6 +202,24 @@ public:
 				}
 				else {
 					//output layer
+					c = 0;
+					conn = neural->conn.link;
+					if (conn) {
+						do {
+							//for all the neurals that links after this neural
+							if (conn->forw == neural) {
+								Neural * _neural = conn->forw;
+								if (_neural) {
+									//formula:
+									//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
+									conn->weight += ETA_W * conn->delta * neural->output;//_neural->delta * neural->output;
+								}
+								c++;
+							}
+
+							conn = neural->conn.next(conn);
+						} while (conn && conn != neural->conn.link);
+					}
 				}
 
 				neural = this->neurals.next(neural);
@@ -206,7 +239,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								neural->bias -= ETA_B * _neural->delta;
+								neural->bias += ETA_B * conn->delta;// _neural->delta;
 							}
 							c++;
 						}
@@ -220,7 +253,7 @@ public:
 					//output layer
 					//formula:
 					//b[j] = b[j] - lamda2 * delta[ij]
-					neural->bias -= ETA_B * neural->delta;
+					neural->bias += ETA_B * neural->delta;
 				}
 
 				neural = this->neurals.next(neural);

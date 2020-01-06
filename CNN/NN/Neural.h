@@ -24,6 +24,7 @@ public:
 	Neural * forw;
 
 	EFTYPE weight;
+	EFTYPE delta;
 
 	// for multilinklist
 	// The number of Connectors will be the max hidden layer numbers + 1

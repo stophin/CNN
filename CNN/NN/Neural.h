@@ -54,7 +54,8 @@ public:
 		output(0),
 		delta(0),
 		bias(0),
-		conn(0){
+		conn(0),
+		sum(0){
 	}
 	~Neural() {
 		conn.~MultiLinkList();
@@ -67,6 +68,7 @@ public:
 	EFTYPE output;
 	EFTYPE delta;
 	EFTYPE bias;
+	EFTYPE sum;
 
 	MultiLinkList<Connector> conn;
 

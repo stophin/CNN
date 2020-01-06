@@ -78,7 +78,11 @@ public:
 		input.adjustWeight();
 	}
 
-#define T_ERROR	0.002//单个样本允许的误差
+	void Scale(EFTYPE dir, EFTYPE dor) {
+		this->divrange = dir;
+		this->divoutrange = dor ;
+	}
+
 	void Train() {
 
 		//set scale
@@ -110,29 +114,38 @@ public:
 
 		INT count = 0;
 		EFTYPE error;
-		while (count < 10000) {
+		while (count < T_TIMES) {
 			ForwardTransfer();
 
 			error = output.getError();
 			if (error < T_ERROR) {
 				break;
 			}
+			neural = input.neurals.link;
+			if (neural) {
+				do {
+
+					printf("%.2f ", neural->value * divrange);
+
+					neural = input.neurals.next(neural);
+				} while (neural && neural != input.neurals.link);
+			}
 			neural = output.neurals.link;
 			if (neural) {
 				do {
 
-					printf("%.2f->", neural->output * divoutrange);
+					printf(" %.2f->%.2f", neural->value * divoutrange, neural->output * divoutrange);
 
 					neural = output.neurals.next(neural);
 				} while (neural && neural != output.neurals.link);
 			}
-			printf("[%5d]Error is: %f\n", count, error);
+			printf("[%5d]Error is: %f\r", count, error);
 			count++;
 
 			ReverseTrasfer();
 		}
 
-		printf("Target:");
+		printf("\nTarget:");
 		neural = input.neurals.link;
 		if (neural) {
 			do {
@@ -236,7 +249,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								printf("%.2f(%.2f, %.2f)-->", _neural->value, _neural->delta, conn->weight);
+								printf("%.2f(%.2e, %.2e)-->", _neural->value, _neural->delta, conn->weight);
 
 								Connector * _conn = _neural->conn.link;
 								if (_conn) {
@@ -244,7 +257,7 @@ public:
 										if (_conn->back == _neural) {
 											Neural * __neural = _conn->forw;
 											if (__neural) {
-												printf("%.2f(%.2f)->", __neural->value, _conn->weight);
+												printf("%.2f(%.2e)->", __neural->value, _conn->weight);
 											}
 										}
 

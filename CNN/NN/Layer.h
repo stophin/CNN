@@ -18,9 +18,9 @@ public:
 
 	MultiLinkList<Neural> neurals;
 
-	void addNeural(EFTYPE value, EFTYPE bias = 0) {
+	void addNeural(EFTYPE value) {
 		Neural * neural = new Neural(value);
-		neural->bias = bias;
+		neural->bias = BIAS;
 		this->neurals.insertLink(neural);
 	}
 
@@ -54,6 +54,7 @@ public:
 						Connector * conn = new Connector(0);
 						conn->back = neural;
 						conn->forw = _neural;
+						conn->weight = WEIGHT;
 						neural->conn.insertLink(conn);
 						_neural->conn.insertLink(conn);
 
@@ -104,6 +105,7 @@ public:
 					//OUTPUT(i) = F(NET(i))
 					//bias
 					t += neural->bias;
+					neural->sum = t;
 					t = eva_fun(t);
 				}
 				else {
@@ -143,12 +145,14 @@ public:
 					//delta[ki] = SUM[j=0~n-1](delta[ij] * w[ij] * F_1(S[i]))
 					// F_1(S[i]) will be multipied in here
 					t = t * eva_fun_1(neural->output);
+					//t = t * neural->output * (1 - neural->output);
 				}
 				else {
 					//output layer
 					//formula:
 					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
 					t = (neural->output - neural->value) * eva_fun_1(neural->output);
+					//t = (neural->output - neural->value) * neural->output * (1 - neural->output);
 				}
 				neural->delta = t;
 
@@ -157,7 +161,6 @@ public:
 		}
 	}
 
-#define ETA_W    0.0035   //权值调整率
 	void adjustWeight() {
 		Neural * neural = this->neurals.link;
 		if (neural) {
@@ -191,15 +194,34 @@ public:
 		}
 	}
 
-#define ETA_B    0.001    //阀值调整率
 	void adjustBias() {
 		Neural * neural = this->neurals.link;
 		if (neural) {
-			INT c = 0;
 			do {
-				//formula:
-				//b[j] = b[j] - lamda2 * delta[ij]
-				neural->bias -= ETA_B * neural->delta;
+				INT c = 0;
+				Connector * conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								neural->bias -= ETA_B * _neural->delta;
+							}
+							c++;
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				if (c > 0) {
+				}
+				else {
+					//output layer
+					//formula:
+					//b[j] = b[j] - lamda2 * delta[ij]
+					neural->bias -= ETA_B * neural->delta;
+				}
 
 				neural = this->neurals.next(neural);
 			} while (neural && neural != this->neurals.link);

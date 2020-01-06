@@ -66,7 +66,7 @@ EFTYPE train_sample_output_min() {
 }
 EFTYPE train_sample_output_max() {
 	//return 300;
-	return 20;
+	return 22;
 }
 EFTYPE train_sample_input(INT index, EFTYPE range_min, EFTYPE range_max) {
 	//return g_indexM[index];

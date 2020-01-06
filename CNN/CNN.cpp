@@ -70,7 +70,7 @@ EFTYPE train_sample_output_max() {
 }
 EFTYPE train_sample_input(INT index, EFTYPE range_min, EFTYPE range_max) {
 	//return g_indexM[index];
-	return sample[g_index][index];
+	return sample[g_index % 41][index];
 }
 EFTYPE train_sample_output(EFTYPE x, EFTYPE y, EFTYPE z) {
 	//return x + y + z;

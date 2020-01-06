@@ -78,13 +78,13 @@ EFTYPE train_sample_output(EFTYPE x, EFTYPE y, EFTYPE z) {
 }
 void train_sample_index() {
 	//g_indexM[g_index]++;
-	if (g_indexM[g_index] >= 100) {
-		g_indexM[g_index] = 0;
-		g_index++;
-		if (g_index >= 3) {
-			g_index = 0;
-		}
-	}
+	//if (g_indexM[g_index] >= 100) {
+	//	g_indexM[g_index] = 0;
+	//	g_index++;
+	//	if (g_index >= 3) {
+	//		g_index = 0;
+	//	}
+	//}
 	++g_index;
 }
 

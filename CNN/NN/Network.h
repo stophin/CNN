@@ -64,14 +64,14 @@ public:
 	}
 
 	void UpdateNetwork() {
-		output.adjustBias();
+		//output.adjustBias();
 		output.adjustWeight();
 		Layer * _hidden = this->hiddens.prev(this->hiddens.link);
 		Layer * hidden = _hidden;
 		if (hidden) {
 			do {
 				hidden->adjustWeight();
-				hidden->adjustBias();
+				//hidden->adjustBias();
 
 				hidden = this->hiddens.prev(hidden);
 			} while (hidden && hidden != _hidden);

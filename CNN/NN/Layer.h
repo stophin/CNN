@@ -157,14 +157,14 @@ public:
 					//formula:
 					//delta[ki] = SUM[j=0~n-1](delta[ij] * w[ij] * F_1(S[i]))
 					// F_1(S[i]) will be multipied in here
-					t = t;// *eva_fun_1(neural->output);
+					t = t *eva_fun_1(neural->output);
 					//t = t * neural->output * (1 - neural->output);
 				}
 				else {
 					//output layer
 					//formula:
 					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
-					t = (neural->value - neural->output) * eva_fun_1(neural->output) / this->neurals.linkcount;
+					t = (neural->value - neural->output) * eva_fun_1(neural->output);// / this->neurals.linkcount;
 					//t = (neural->output - neural->value) * neural->output * (1 - neural->output);
 				}
 				neural->delta = t;
@@ -198,12 +198,12 @@ public:
 				if (conn) {
 					do {
 						//for all the neurals that links after this neural
-						if (conn->back == neural) {
+						if (conn->forw == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
 								//formula:
 								//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
-								conn->weight += ETA_W * conn->delta * neural->output * eva_fun_1(_neural->output);//_neural->delta * neural->output;
+								conn->weight += ETA_W * conn->delta * neural->output;// *eva_fun_1(_neural->output);//_neural->delta * neural->output;
 							}
 							c++;
 						}
@@ -214,25 +214,6 @@ public:
 				if (c > 0) {
 				}
 				else {
-					//output layer
-					c = 0;
-					conn = neural->conn.link;
-					if (conn) {
-						do {
-							//for all the neurals that links after this neural
-							if (conn->forw == neural) {
-								Neural * _neural = conn->forw;
-								if (_neural) {
-									//formula:
-									//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
-									conn->weight += ETA_W * conn->delta * neural->output;//_neural->delta * neural->output;
-								}
-								c++;
-							}
-
-							conn = neural->conn.next(conn);
-						} while (conn && conn != neural->conn.link);
-					}
 				}
 
 				neural = this->neurals.next(neural);

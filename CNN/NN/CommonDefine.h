@@ -13,11 +13,11 @@
 #define MAX_SIMULATION_RANGE_INPUT	1.0
 #define MAX_SIMULATION_RANGE_OUTPUT	1.0
 
-#define WEIGHT	0.01//(((EFTYPE)(rand() % 100))/100.0)//初始化权值为0，也可以初始化随机值 
-#define BIAS	0.5//初始化阀值为0，也可以初始化随机值
+#define WEIGHT	(((EFTYPE)(rand() % 10))/100.0)//初始化权值为0，也可以初始化随机值 
+#define BIAS	0.1//初始化阀值为0，也可以初始化随机值
 
-#define ETA_W    0.3   //权值调整率 adjustWeight
-#define ETA_B    0.001    //阀值调整率 adjustBias
+#define ETA_W    0.35   //权值调整率 adjustWeight
+#define ETA_B    0.01    //阀值调整率 adjustBias
 
 #define T_ERROR	0.075		//单个样本允许的误差
 #define T_TIMES	10000000	//训练次数

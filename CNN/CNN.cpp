@@ -401,6 +401,7 @@ int test0() {
 	}
 	return 0;
 }
+#ifdef _NANOC_WINDOWS_
 using namespace cv;
 void get_input_label(std::string filename, cv::Mat& input, cv::Mat& label, int sample_num, int start)
 {
@@ -577,7 +578,7 @@ int test1() {
 	getch();
 	return 0;
 }
-
+#endif
 
 int main(int argc, _TCHAR* argv[])
 {

@@ -22,7 +22,7 @@
 #define T_ERROR	0.075		//单个样本允许的误差
 #define T_TIMES	10000000	//训练次数
 
-
+#ifdef _NANOC_WINDOWS_
 #include<opencv2\opencv.hpp>
 #include<opencv2\core\core.hpp>
 #include<opencv2\highgui\highgui.hpp>
@@ -37,4 +37,5 @@
 
 //Get sample_number samples in XML file,from the start column. 
 void get_input_label(std::string filename, cv::Mat& input, cv::Mat& label, int sample_num, int start=0);
+#endif
 #endif

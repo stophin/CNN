@@ -28,8 +28,21 @@ public:
 		if (size < this->neurals.linkcount){
 			return;
 		}
-		for (int i = 0; i < this->neurals.linkcount; i++) {
-			this->neurals.getPos(i)->value = values[i];
+		//for (int i = 0; i < this->neurals.linkcount; i++) {
+		//	this->neurals.getPos(i)->value = values[i];
+		//}
+		int i = 0;
+		Neural * _neural = this->neurals.link;
+		if (_neural) {
+			do {
+				_neural->value = values[i];
+				i++;
+				if (i >= size) {
+					break;
+				}
+
+				_neural = this->neurals.next(_neural);
+			} while (_neural && _neural != this->neurals.link);
 		}
 		return;
 	}
@@ -151,7 +164,7 @@ public:
 					//output layer
 					//formula:
 					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
-					t = (neural->value - neural->output) * eva_fun_1(neural->output);
+					t = (neural->value - neural->output) * eva_fun_1(neural->output) / this->neurals.linkcount;
 					//t = (neural->output - neural->value) * neural->output * (1 - neural->output);
 				}
 				neural->delta = t;
@@ -267,13 +280,31 @@ public:
 		if (neural) {
 			INT c = 0;
 			do {
-				ans += 0.5 * (neural->output - neural->value) * (neural->output - neural->value);
+				ans += 0.5 * (neural->output - neural->value) * (neural->output - neural->value) / this->neurals.linkcount;
 
 				neural = this->neurals.next(neural);
 			} while (neural && neural != this->neurals.link);
 		}
 
 		return ans;
+	}
+
+	Neural * getMax() {
+		double max = 0;
+		Neural * neural = this->neurals.link;
+		Neural * predict = neural;
+		if (neural) {
+			do {
+
+				if (max < neural->output) {
+					max = neural->output;
+					predict = neural;
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+		return predict;
 	}
 
 	//activation function

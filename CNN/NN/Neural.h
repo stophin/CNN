@@ -51,6 +51,7 @@ public:
 class Neural {
 public:
 	Neural(EFTYPE value) :
+		uniqueID(value),
 		value(value),
 		output(0),
 		delta(0),

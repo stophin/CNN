@@ -24,12 +24,6 @@ public:
 	Neural * forw;
 
 	EFTYPE weight;
-	EFTYPE delta;
-
-	EFTYPE deltaSum;
-
-	EFTYPE *_deltaSum;
-	EFTYPE *_delta;
 
 	// for multilinklist
 	// The number of Connectors will be the max hidden layer numbers + 1
@@ -68,21 +62,24 @@ public:
 		conn.~MultiLinkList();
 	}
 
-	union {
-		EFTYPE value;
-		EFTYPE weight;
-	};
+	EFTYPE value;
 	EFTYPE output;
 	EFTYPE delta;
 	EFTYPE bias;
 	EFTYPE sum;
 
 	EFTYPE biasSum;
+	EFTYPE deltaSum;
 
+	EFTYPE *_deltaSum;
 	EFTYPE *_biasSum;
 	EFTYPE *_delta;
 	EFTYPE *_value;
 	EFTYPE *_output;
+	//mode:
+	//0-normal
+	//1-convolutional
+	int mode;
 
 	MultiLinkList<Connector> conn;
 

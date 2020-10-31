@@ -10,7 +10,12 @@ typedef class Layer Layer;
 class Layer {
 public:
 	Layer() :
-		neurals(0){
+		mode(0),
+		neurals(0) {
+	}
+	Layer(int mode) :
+		mode(mode),
+		neurals(0) {
 	}
 	~Layer() {
 		neurals.~MultiLinkList();
@@ -18,9 +23,15 @@ public:
 
 	MultiLinkList<Neural> neurals;
 
+	//mode:
+	//0-normal
+	//1-convolutional
+	int mode;
+
 	void addNeural(EFTYPE value) {
 		Neural * neural = new Neural(value);
 		neural->bias = BIAS;
+		neural->mode = this->mode;
 		this->neurals.insertLink(neural);
 	}
 
@@ -145,7 +156,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								t += conn->weight * conn->delta;
+								t += conn->weight * neural->delta;
 							}
 							c++;
 						}
@@ -169,21 +180,6 @@ public:
 				}
 				neural->delta = t;
 
-				conn = neural->conn.link;
-				if (conn) {
-					do {
-						//for all neurals that links to this neural
-						if (conn->forw == neural) {
-							Neural * _neural = conn->back;
-							if (_neural) {
-								conn->delta = neural->delta;// *eva_fun_1(_neural->output);//*_nerual->output;
-							}
-						}
-
-						conn = neural->conn.next(conn);
-					} while (conn && conn != neural->conn.link);
-				}
-
 				neural = this->neurals.next(neural);
 			} while (neural && neural != this->neurals.link);
 		}
@@ -203,7 +199,7 @@ public:
 							if (_neural) {
 								//formula:
 								//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
-								conn->weight += ETA_W * conn->delta * neural->output;// *eva_fun_1(_neural->output);//_neural->delta * neural->output;
+								conn->weight += ETA_W * _neural->delta * neural->output;// *eva_fun_1(_neural->output);//_neural->delta * neural->output;
 							}
 							c++;
 						}
@@ -233,7 +229,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								neural->bias += ETA_B * conn->delta;// _neural->delta;
+								neural->bias += ETA_B * _neural->delta;// _neural->delta;
 							}
 							c++;
 						}
@@ -281,7 +277,10 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							conn->deltaSum = 0;
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								_neural->deltaSum = 0;
+							}
 						}
 
 						conn = neural->conn.next(conn);
@@ -316,7 +315,10 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							conn->deltaSum += neural->output * conn->delta;
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								_neural->deltaSum += neural->output * _neural->delta;
+							}
 						}
 
 						conn = neural->conn.next(conn);
@@ -351,7 +353,10 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							conn->weight -= ETA_W * conn->deltaSum / size;
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								conn->weight -= ETA_W * _neural->deltaSum / size;
+							}
 						}
 
 						conn = neural->conn.next(conn);
@@ -435,18 +440,21 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							if (mode > 0) {
-								if (conn->_deltaSum) {
-									delete[] conn->_deltaSum;
-									conn->_deltaSum = NULL;
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								if (mode > 0) {
+									if (_neural->_deltaSum) {
+										delete[] _neural->_deltaSum;
+										_neural->_deltaSum = NULL;
+									}
 								}
-							}
-							if (mode == 1) {
-								conn->_deltaSum = new EFTYPE[tc];
-							}
-							if (mode != 2) {
-								for (int i = 0; i < tc; i++) {
-									conn->_deltaSum[i] = 0;
+								if (mode == 1) {
+									_neural->_deltaSum = new EFTYPE[tc];
+								}
+								if (mode != 2) {
+									for (int i = 0; i < tc; i++) {
+										_neural->_deltaSum[i] = 0;
+									}
 								}
 							}
 						}
@@ -519,18 +527,21 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							if (mode > 0) {
-								if (conn->_delta) {
-									delete[] conn->_delta;
-									conn->_delta = NULL;
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								if (mode > 0) {
+									if (_neural->_delta) {
+										delete[] _neural->_delta;
+										_neural->_delta = NULL;
+									}
 								}
-							}
-							if (mode == 1) {
-								conn->_delta = new EFTYPE[tc];
-							}
-							if (mode != 2) {
-								for (int i = 0; i < tc; i++) {
-									conn->_delta[i] = 0;
+								if (mode == 1) {
+									_neural->_delta = new EFTYPE[tc];
+								}
+								if (mode != 2) {
+									for (int i = 0; i < tc; i++) {
+										_neural->_delta[i] = 0;
+									}
 								}
 							}
 						}
@@ -601,7 +612,10 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							conn->_deltaSum[tid] += neural->_output[tid] * conn->_delta[tid];
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								_neural->_deltaSum[tid] += neural->_output[tid] * _neural->_delta[tid];
+							}
 						}
 
 						conn = neural->conn.next(conn);
@@ -637,8 +651,11 @@ public:
 					do {
 						//for all the neurals that links after this neural
 						if (conn->back == neural) {
-							for (int i = 0; i < tc; i++) {
-								conn->deltaSum += conn->_deltaSum[i];
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								for (int i = 0; i < tc; i++) {
+									_neural->deltaSum += _neural->_deltaSum[i];
+								}
 							}
 						}
 
@@ -721,7 +738,7 @@ public:
 						if (conn->back == neural) {
 							Neural * _neural = conn->forw;
 							if (_neural) {
-								t += conn->weight * conn->_delta[tid];
+								t += conn->weight * _neural->_delta[tid];
 							}
 							c++;
 						}
@@ -752,7 +769,7 @@ public:
 						if (conn->forw == neural) {
 							Neural * _neural = conn->back;
 							if (_neural) {
-								conn->_delta[tid] = neural->_delta[tid];// *eva_fun_1(_neural->output);//*_nerual->output;
+								//conn->_delta[tid] = neural->_delta[tid];// *eva_fun_1(_neural->output);//*_nerual->output;
 							}
 						}
 

@@ -26,6 +26,11 @@ public:
 	EFTYPE weight;
 	EFTYPE delta;
 
+	EFTYPE deltaSum;
+
+	EFTYPE *_deltaSum;
+	EFTYPE *_delta;
+
 	// for multilinklist
 	// The number of Connectors will be the max hidden layer numbers + 1
 #define Connector_Size MAX_HIDDEN_LAYER + 1
@@ -71,6 +76,13 @@ public:
 	EFTYPE delta;
 	EFTYPE bias;
 	EFTYPE sum;
+
+	EFTYPE biasSum;
+
+	EFTYPE *_biasSum;
+	EFTYPE *_delta;
+	EFTYPE *_value;
+	EFTYPE *_output;
 
 	MultiLinkList<Connector> conn;
 

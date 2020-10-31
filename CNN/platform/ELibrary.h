@@ -10,7 +10,9 @@
 #define _ELIBRARY_H_
 
 
-//#define _NANOC_WINDOWS_
+#define _NANOC_WINDOWS_
+
+#define _THREAD_SEM_
 
 #ifdef _NANOC_WINDOWS_
 #include <Windows.h>
@@ -23,6 +25,30 @@
 #define getch _getch
 #define scanf scanf_s
 #define kbhit _kbhit
+#include <process.h>
+
+typedef void *HANDLE;
+typedef HANDLE HANDLE_MUTEX;
+#define __NANOC_THREAD_FUNC_DECLARE(hHandle, pFuncName)\
+	public:\
+	HANDLE hHandle;\
+	static unsigned int __stdcall pFuncName(void *pv);
+#define __NANOC_THREAD_FUNC_BEGIN__(pFuncName) unsigned int __stdcall pFuncName(void *pv)
+#define __NANOC_THREAD_FUNC_END__(nReturn) return nReturn
+
+#define __NANOC_THREAD_BEGIN__(hHandle, pFuncName, pParam) hHandle = (HANDLE)_beginthreadex(NULL, 0, &pFuncName, pParam, 0, 0)
+#define __NANOC_THREAD_WAIT__(hHandle) WaitForSingleObject(hHandle, 1000)
+#define __NANOC_THREAD_END__(hHandle) TerminateThread(hHandle, 0)
+
+#ifndef _THREAD_SEM_
+#define __NANOC_THREAD_MUTEX_INIT__(hMutex, obj) obj->hMutex = CreateMutex(NULL, FALSE, NULL)
+#define __NANOC_THREAD_MUTEX_LOCK__(hMutex) WaitForSingleObject(hMutex, INFINITE)
+#define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) ReleaseMutex(hMutex);
+#else
+#define __NANOC_THREAD_MUTEX_INIT__(hMutex, obj) obj->hMutex = CreateSemaphore(NULL, 1, 1, NULL)
+#define __NANOC_THREAD_MUTEX_LOCK__(hMutex) WaitForSingleObject(hMutex, INFINITE)
+#define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) ReleaseSemaphore(hMutex, 1, NULL);
+#endif
 #else 
 
 #include <stdlib.h>
@@ -94,6 +120,34 @@ int getch(void)
 #define min(x, y) (x > y ? y : x)
 #define max(x, y) (x > y ? x : y)
 
+#include <pthread.h>
+#include <semaphore.h>
+#include <signal.h>
+
+typedef void * HINSTANCE;
+typedef pthread_t HANDLE;
+typedef pthread_mutex_t HANDLE_MUTEX;
+#define __NANOC_THREAD_FUNC_DECLARE(hHandle, pFuncName)\
+	private:\
+	HANDLE hHandle; \
+	static void * pFuncName(void *pv);
+#define __NANOC_THREAD_FUNC_BEGIN__(pFuncName) void * pFuncName(void *pv)
+#define __NANOC_THREAD_FUNC_END__(nReturn) pthread_exit((void *)nReturn)
+
+#define __NANOC_THREAD_BEGIN__(hHandle, pFuncName, pParam) pthread_create(&hHandle, NULL, pFuncName, pParam)
+#define __NANOC_THREAD_WAIT__(hHandle) pthread_cancel(hHandle)
+#define __NANOC_THREAD_END__(hHandle) pthread_kill(hHandle, 0)
+
+#ifndef _THREAD_SEM_
+#define __NANOC_THREAD_MUTEX_INIT__(hMutex, obj) pthread_mutex_init(&obj->hMutex, NULL)
+#define __NANOC_THREAD_MUTEX_LOCK__(hMutex)  pthread_mutex_lock(&hMutex)
+#define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) pthread_mutex_unlock(&hMutex)
+#else
+typedef sem_t HANDLE_MUTEX;
+#define __NANOC_THREAD_MUTEX_INIT__(hMutex, obj) sem_init(&obj->hMutex, 0, 0);sem_post(&obj->hMutex)
+#define __NANOC_THREAD_MUTEX_LOCK__(hMutex)  sem_wait(&hMutex)
+#define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) sem_post(&hMutex)
+#endif
 #endif
 
 #define ZERO	1e-10

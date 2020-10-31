@@ -164,7 +164,7 @@ public:
 					//output layer
 					//formula:
 					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
-					t = (neural->value - neural->output) * eva_fun_1(neural->output);// / this->neurals.linkcount;
+					t = (neural->output - neural->value) * eva_fun_1(neural->output);// / this->neurals.linkcount;
 					//t = (neural->output - neural->value) * neural->output * (1 - neural->output);
 				}
 				neural->delta = t;
@@ -261,7 +261,517 @@ public:
 		if (neural) {
 			INT c = 0;
 			do {
-				ans += 0.5 * (neural->output - neural->value) * (neural->output - neural->value) / this->neurals.linkcount;
+				ans += 0.5 * (neural->value - neural->output) * (neural->value - neural->output) / this->neurals.linkcount;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+
+		return ans;
+	}
+
+	void resetDeltaSum() {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							conn->deltaSum = 0;
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				neural->biasSum = 0;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void resetBiasSum() {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				neural->biasSum = 0;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void updateDeltaSum() {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							conn->deltaSum += neural->output * conn->delta;
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				neural->biasSum += neural->delta;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void updateBiasSum() {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				neural->biasSum += neural->delta;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void updateWeightWithDeltaSum(int size) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							conn->weight -= ETA_W * conn->deltaSum / size;
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				neural->bias -= ETA_W * neural->biasSum / size;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void updateBiasWithBiasSum(int size) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				neural->bias -= ETA_W * neural->biasSum / size;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+
+	//mode:
+	//1-alloc memory and init
+	//2-delete alloced memory
+	//0-init alloced memory
+	void resetNeural(int tc, int mode) {
+		Neural * _neural = this->neurals.link;
+		if (_neural) {
+			do {
+				if (mode > 0) {
+					if (_neural->_value) {
+						delete[] _neural->_value;
+						_neural->_value = NULL;
+					}
+				}
+				if (mode == 1) {
+					_neural->_value = new EFTYPE[tc];
+				}
+				if (mode != 2) {
+					for (int i = 0; i < tc; i++) {
+						_neural->_value[i] = 0;
+					}
+				}
+
+				if (mode > 0) {
+					if (_neural->_output) {
+						delete[] _neural->_output;
+						_neural->_output = NULL;
+					}
+				}
+				if (mode == 1) {
+					_neural->_output = new EFTYPE[tc];
+				}
+				if (mode != 2) {
+					for (int i = 0; i < tc; i++) {
+						_neural->_output[i] = 0;
+					}
+				}
+
+				_neural = this->neurals.next(_neural);
+			} while (_neural && _neural != this->neurals.link);
+		}
+		return;
+	}
+	//mode:
+	//1-alloc memory and init
+	//2-delete alloced memory
+	//0-init alloced memory
+	void resetDeltaSum(int tc, int mode) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							if (mode > 0) {
+								if (conn->_deltaSum) {
+									delete[] conn->_deltaSum;
+									conn->_deltaSum = NULL;
+								}
+							}
+							if (mode == 1) {
+								conn->_deltaSum = new EFTYPE[tc];
+							}
+							if (mode != 2) {
+								for (int i = 0; i < tc; i++) {
+									conn->_deltaSum[i] = 0;
+								}
+							}
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				if (mode > 0) {
+					if (neural->_biasSum) {
+						delete[] neural->_biasSum;
+						neural->_biasSum = NULL;
+					}
+				}
+				if (mode == 1) {
+					neural->_biasSum = new EFTYPE[tc];
+				}
+				if (mode != 2) {
+					for (int i = 0; i < tc; i++) {
+						neural->_biasSum[i] = 0;
+					}
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	//mode:
+	//1-alloc memory and init
+	//2-delete alloced memory
+	//0-init alloced memory
+	void resetBiasSum(int tc, int mode) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				if (mode > 0) {
+					if (neural->_biasSum) {
+						delete[] neural->_biasSum;
+						neural->_biasSum = NULL;
+					}
+				}
+				if (mode == 1) {
+					neural->_biasSum = new EFTYPE[tc];
+				}
+				if (mode != 2) {
+					for (int i = 0; i < tc; i++) {
+						neural->_biasSum[i] = 0;
+					}
+				}
+
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+	//mode:
+	//1-alloc memory and init
+	//2-delete alloced memory
+	//0-init alloced memory
+	void resetDelta(int tc, int mode) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							if (mode > 0) {
+								if (conn->_delta) {
+									delete[] conn->_delta;
+									conn->_delta = NULL;
+								}
+							}
+							if (mode == 1) {
+								conn->_delta = new EFTYPE[tc];
+							}
+							if (mode != 2) {
+								for (int i = 0; i < tc; i++) {
+									conn->_delta[i] = 0;
+								}
+							}
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				if (mode > 0) {
+					if (neural->_delta) {
+						delete[] neural->_delta;
+						neural->_delta = NULL;
+					}
+				}
+				if (mode == 1) {
+					neural->_delta = new EFTYPE[tc];
+				}
+				if (mode != 2) {
+					for (int i = 0; i < tc; i++) {
+						neural->_delta[i] = 0;
+					}
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+	void setNeural(EFTYPE values[], int size, int tid) {
+		if (size < this->neurals.linkcount) {
+			return;
+		}
+		//for (int i = 0; i < this->neurals.linkcount; i++) {
+		//	this->neurals.getPos(i)->value = values[i];
+		//}
+		int i = 0;
+		Neural * _neural = this->neurals.link;
+		if (_neural) {
+			do {
+				_neural->_value[tid] = values[i];
+				i++;
+				if (i >= size) {
+					break;
+				}
+
+				_neural = this->neurals.next(_neural);
+			} while (_neural && _neural != this->neurals.link);
+		}
+		return;
+	}
+	void setScale(EFTYPE scale, int tid) {
+		Neural * neural = this->neurals.link;
+		if (neural) {
+			do {
+				neural->_value[tid] *= scale;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void updateDeltaSum(int tid) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							conn->_deltaSum[tid] += neural->_output[tid] * conn->_delta[tid];
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				neural->_biasSum[tid] += neural->_delta[tid];
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void updateBiasSum(int tid) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				neural->_biasSum[tid] += neural->_delta[tid];
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+	void accumulateDeltaSum(int tc) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all the neurals that links after this neural
+						if (conn->back == neural) {
+							for (int i = 0; i < tc; i++) {
+								conn->deltaSum += conn->_deltaSum[i];
+							}
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				for (int i = 0; i < tc; i++) {
+					neural->biasSum += neural->_biasSum[i];
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void accumulateBiasSum(int tc) {
+		Neural *neural = this->neurals.link;
+		Connector * conn;
+		if (neural) {
+			do {
+				for (int i = 0; i < tc; i++) {
+					neural->biasSum += neural->_biasSum[i];
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+	void getOutput(int tid) {
+		Neural * neural = this->neurals.link;
+		if (neural) {
+			do {
+				INT c = 0;
+				EFTYPE t = 0;
+				Connector * conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all neural that links before this neural
+						if (conn->forw == neural) {
+							Neural * _neural = conn->back;
+							if (_neural) {
+								t += conn->weight * _neural->_output[tid];
+							}
+							c++;
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				if (c > 0) {
+					//formula:
+					//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+					//OUTPUT(i) = F(NET(i))
+					//bias
+					t += neural->bias;
+					//neural->sum = t;
+					t = eva_fun(t);
+				}
+				else {
+					//input layer
+					t = neural->_value[tid];
+				}
+				neural->_output[tid] = t;
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+	void getDelta(int tid) {
+		Neural * neural = this->neurals.link;
+		if (neural) {
+			do {
+				INT c = 0;
+				EFTYPE t = 0;
+				Connector * conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all neurals that links after this neural
+						if (conn->back == neural) {
+							Neural * _neural = conn->forw;
+							if (_neural) {
+								t += conn->weight * conn->_delta[tid];
+							}
+							c++;
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+				if (c > 0) {
+					//formula:
+					//delta[ki] = SUM[j=0~n-1](delta[ij] * w[ij] * F_1(S[i]))
+					// F_1(S[i]) will be multipied in here
+					t = t * eva_fun_1(neural->_output[tid]);
+					//t = t * neural->output * (1 - neural->output);
+				}
+				else {
+					//output layer
+					//formula:
+					//delta[ij] = (d[j] - y[j]) * F_1(S[j]
+					t = (neural->_output[tid] - neural->_value[tid]) * eva_fun_1(neural->_output[tid]);// / this->neurals.linkcount;
+					//t = (neural->output - neural->value) * neural->output * (1 - neural->output);
+				}
+				neural->_delta[tid] = t;
+
+				conn = neural->conn.link;
+				if (conn) {
+					do {
+						//for all neurals that links to this neural
+						if (conn->forw == neural) {
+							Neural * _neural = conn->back;
+							if (_neural) {
+								conn->_delta[tid] = neural->_delta[tid];// *eva_fun_1(_neural->output);//*_nerual->output;
+							}
+						}
+
+						conn = neural->conn.next(conn);
+					} while (conn && conn != neural->conn.link);
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+
+	EFTYPE getError(int tid) {
+		Neural * neural = this->neurals.link;
+		EFTYPE ans = 0;
+		if (neural) {
+			INT c = 0;
+			do {
+				ans += 0.5 * (neural->_value[tid] - neural->_output[tid]) * (neural->_value[tid] - neural->_output[tid]) / this->neurals.linkcount;
 
 				neural = this->neurals.next(neural);
 			} while (neural && neural != this->neurals.link);

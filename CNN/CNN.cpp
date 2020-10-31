@@ -401,7 +401,11 @@ int test0() {
 	}
 	return 0;
 }
+#if 0
 #ifdef _NANOC_WINDOWS_
+#pragma comment(lib, "opencv_core401d.lib")
+#pragma comment(lib, "opencv_highgui401d.lib")
+#pragma comment(lib, "opencv_imgproc401d.lib")
 using namespace cv;
 void get_input_label(std::string filename, cv::Mat& input, cv::Mat& label, int sample_num, int start)
 {
@@ -424,8 +428,8 @@ int test1() {
 	//Get test samples and test samples 
 	Mat sample, label, test_sample, test_label;
 	int sample_number = 800;
-	get_input_label("E:\\stophin\\Program\\Neural\\Neural\\data\\input_label_1000.xml", sample, label, sample_number);
-	get_input_label("E:\\stophin\\Program\\Neural\\Neural\\data\\input_label_1000.xml", test_sample, test_label, 200, 800);
+	get_input_label("H:\\Neural\\Neural\\data\\input_label_1000.xml", sample, label, sample_number);
+	get_input_label("H:\\Neural\\Neural\\data\\input_label_1000.xml", test_sample, test_label, 200, 800);
 
 	//inputs
 	for (int i = 0; i < sample.rows; i++) {
@@ -579,7 +583,236 @@ int test1() {
 	return 0;
 }
 #endif
+#endif
 
+int test1() {
+	INT i, j, k;
+
+	Network nets;
+
+	//inputs
+	nets.input.addNeural(1);
+	nets.input.addNeural(2);
+
+	//outputs
+	nets.output.addNeural(1);
+
+	//layers
+	for (i = 0; i < 1; i++) {
+		Layer * hidden = new Layer();
+
+		//formula of perfect hidden num:
+		//sqrt(in_num + out_num) + a
+		//a is 5
+		hidden->addNeural(1 + (i + 1) * 1000);
+		hidden->addNeural(2 + (i + 1) * 1000);
+		hidden->addNeural(3 + (i + 1) * 1000);
+		hidden->addNeural(4 + (i + 1) * 1000);
+		hidden->addNeural(5 + (i + 1) * 1000);
+		hidden->addNeural(6 + (i + 1) * 1000);
+		hidden->addNeural(7 + (i + 1) * 1000);
+
+		nets.hiddens.insertLink(hidden);
+		nets.layers.insertLink(hidden, &nets.output, NULL);
+
+		hidden = nets.layers.link;
+		if (hidden) {
+			Layer * _hidden = nets.layers.next(hidden);
+			if (_hidden && _hidden != nets.layers.link) {
+				do {
+
+					printf("%p, %p->", hidden, _hidden);
+
+					hidden = _hidden;
+					_hidden = nets.layers.next(_hidden);
+				} while (_hidden && _hidden != nets.layers.link);
+				printf("\n");
+			}
+		}
+
+		hidden = nets.hiddens.link;
+		if (hidden) {
+			do {
+
+				printf("%p=>", hidden);
+
+				hidden = nets.hiddens.next(hidden);
+			} while (hidden && hidden != nets.hiddens.link);
+			printf("\n");
+		}
+	}
+
+	//make connections
+	Layer * hidden = nets.layers.link;
+	if (hidden) {
+		i = 0;
+		Layer * _hidden = nets.layers.next(hidden);
+		if (_hidden && _hidden != nets.layers.link) {
+			do {
+
+				hidden->makeConnection(*_hidden, ++i);
+
+				hidden = _hidden;
+				_hidden = nets.layers.next(_hidden);
+			} while (_hidden && _hidden != nets.layers.link);
+		}
+	}
+
+	nets.Traverse();
+
+	getch();
+
+	//test input
+	Layer input;
+	input.addNeural(1);
+	input.addNeural(2);
+	Layer output;
+	output.addNeural(1);
+
+	//data
+	/*
+	EFTYPE X[][2] = {
+		{0, 0},
+		{0, 1},
+		{1, 0},
+		{1, 1},
+		{0.1, 0.2},
+		{0.15, 0.9},
+		{1.0, 0.01},
+		{0.88, 1.03}
+	};
+	EFTYPE Y[][1] = {
+		{0},
+		{1},
+		{1},
+		{0},
+		{0},
+		{1},
+		{1},
+		{0}
+	};
+	INT sample_size = 1;
+	INT sample_size_real = 8;
+	INT in_size = 2;
+	INT out_size = 1;
+	EFTYPE divx = 1.0;
+	EFTYPE divy = 1.0;
+	nets.Scale(divx, divy); */
+
+	EFTYPE X[][2] = {
+		{0.356649128, 0.030306376},
+		{0.105260929, 0.876207066},
+		{0.481199704, 0.253876948},
+		{0.471508224, 0.54439978},
+		{0.077497426, 0.885208},
+		{0.255285458, 0.785259903},
+		{0.391494441, 0.069935833},
+		{0.933032415, 0.301373387},
+		{0.523691793, 0.796247175},
+		{0.779717102, 0.713375742},
+		{0.076675163, 0.410487185},
+		{0.962224658, 0.016073412},
+		{0.515055289, 0.72873525},
+		{0.322424475, 0.730628336},
+		{0.688762677, 0.755388034},
+		{0.260675482, 0.13143853},
+		{0.778240922, 0.093408653},
+		{0.619528796, 0.673211656},
+		{0.615551417, 0.035100893},
+		{0.854474454, 0.815391365},
+		{0.217608904, 0.701204949},
+		{0.235063898, 0.863031668},
+		{0.119538688, 0.597635479},
+		{0.938469809, 0.046644211},
+		{0.424230246, 0.954724505},
+		{0.2804779, 0.59883102},
+		{0.019132831, 0.634812852},
+		{0.761891727, 0.364283401},
+		{0.220551241, 0.398446811},
+		{0.576858876, 0.735632906},
+		{0.125193284, 0.740642657},
+		{0.240168653, 0.6018266},
+		{0.513267996, 0.462949566},
+		{0.1428799, 0.87131965},
+		{0.858053973, 0.602338272},
+		{0.587654877, 0.385143152},
+		{0.516003448, 0.988193208},
+		{0.660521998, 0.270327062},
+		{0.214826163, 0.70650369},
+		{0.726414412, 0.514509073},
+		{0.898426694, 0.627019375},
+		{0.773045407, 0.161891909}
+	};
+	EFTYPE Y[][1] = {
+		{0},{0},{0},{1},{0},{1},{0},{1},{1},{1},{0},{0},{1},{1},{1},{0},{0},{1},{0},{1},{0},{1},{0},{0},{1},{0},{0},{1},{0},{1},{0},{0},{0},{1},{1},{0},{1},{0},{0},{1},{1},{0}
+	};
+	INT sample_size = 30;
+	INT sample_size_real = 42;
+	INT in_size = 2;
+	INT out_size = 1;
+	EFTYPE divx = 1.0;
+	EFTYPE divy = 1.0;
+	nets.Scale(divx, divy);
+
+	int count = 0;
+	while (1) {
+		count++;
+
+		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.0001);
+		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.001, 3, 10);
+		sample_size++;
+		if (sample_size > 4) {
+			sample_size = 4;
+		}
+
+		//if (kbhit())
+		{
+			printf("Training: %d\n", count);
+			nets.Traverse();
+			while (1) {
+				INT ind;
+				while (scanf("%d", &ind) != 1) {
+					getchar();
+					fflush(stdin);
+				}
+				if (ind < 0 || ind >= sample_size_real) {
+					break;
+				}
+
+				input.setNeural(X[ind], in_size);
+				nets.Forecast(input, &output);
+				printf("\n");
+				for (i = 0; i < in_size; i++) {
+					printf("%e ", X[ind][i]);
+				}
+				printf("\n");
+				for (i = 0; i < out_size; i++) {
+					printf("%e ", Y[ind][i]);
+				}
+				printf("\n");
+				printf("Actual:\n");
+
+				Neural * neural = output.neurals.link;
+				EFTYPE e = 0;
+				i = 0;
+				if (neural) {
+					do {
+						printf("%e %e", Y[ind][i], neural->output);
+						EFTYPE f = Y[ind][i] - neural->output;
+						f = f * f / (2 * divy);
+						e += f;
+						printf(" error: %lf\n", f);
+						i++;
+
+						neural = output.neurals.next(neural);
+					} while (neural && neural != output.neurals.link);
+				}
+				printf("total error: %lf\n", e);
+			}
+		}
+	}
+	return 0;
+}
 int main(int argc, _TCHAR* argv[])
 {
 	while (1) {

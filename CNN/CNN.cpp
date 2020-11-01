@@ -4,6 +4,111 @@
 
 #include "NN/Network.h"
 
+const int classes_count = 10;
+const int width = 32;
+const int height = 32;
+const int train_sample_count = 60000;
+const int test_sample_count = 10000;
+// 读取数据----------------------------------------------------------------------------------------------/
+// 高低位转换
+int SwapEndien_32(int i)
+{
+	return ((i & 0x000000FF) << 24) | ((i & 0x0000FF00) << 8) | ((i & 0x00FF0000) >> 8) | ((i & 0xFF000000) >> 24);
+}
+
+int ReverseInt(int i)
+{
+	unsigned char ch1, ch2, ch3, ch4;
+	ch1 = i & 255;
+	ch2 = (i >> 8) & 255;
+	ch3 = (i >> 16) & 255;
+	ch4 = (i >> 24) & 255;
+
+	return ((int)ch1 << 24) + ((int)ch2 << 16) + ((int)ch3 << 8) + ch4;
+}
+
+// 读训练/测试集数据
+void read_mnist_data(Sample *sample, const char *file_name)
+{
+	FILE *fp = NULL;
+	fopen_s(&fp, file_name, "rb");
+
+	int magic_number = 0;
+	int sample_count = 0;
+	int n_rows = 0, n_cols = 0, padding = 2;
+
+	fread((char*)&magic_number, sizeof(magic_number), 1, fp);
+	magic_number = SwapEndien_32(magic_number);
+	fread((char*)&sample_count, sizeof(sample_count), 1, fp);
+	sample_count = SwapEndien_32(sample_count);
+	fread((char*)&n_rows, sizeof(n_rows), 1, fp);
+	n_rows = SwapEndien_32(n_rows);
+	fread((char*)&n_cols, sizeof(n_cols), 1, fp);
+	n_cols = SwapEndien_32(n_cols);
+
+	double scale_max = 1.0;
+	double scale_min = -1.0;
+	unsigned char temp = 0;
+	int size = width * height;
+	int mem_size = size * sizeof(double);
+	for (int k = 0; k < sample_count; k++)
+	{
+		sample[k].data = (double *)malloc(mem_size);
+
+		for (int i = 0; i < size; i++)
+		{
+			sample[k].data[i] = scale_min;
+		}
+
+		for (int i = 0; i < n_rows; i++)
+		{
+			for (int j = 0; j < n_cols; j++)
+			{
+				fread((char*)&temp, sizeof(temp), 1, fp);
+				sample[k].data[(i + padding)*width + j + padding] = ((double)temp / 255.0) * (scale_max - scale_min) + scale_min;
+			}
+		}
+	}
+
+	fclose(fp);
+	fp = NULL;
+}
+
+// 读训练/测试集标签
+void read_mnist_label(Sample *sample, const char *file_name)
+{
+	FILE *fp = NULL;
+	fopen_s(&fp, file_name, "rb");
+
+	int magic_number = 0;
+	int sample_count = 0;
+
+	fread((char*)&magic_number, sizeof(magic_number), 1, fp);
+	magic_number = SwapEndien_32(magic_number);
+
+	fread((char*)&sample_count, sizeof(sample_count), 1, fp);
+	sample_count = SwapEndien_32(sample_count);
+
+	unsigned char label = 0;
+	int mem_size = classes_count * sizeof(double);
+	for (int k = 0; k < sample_count; k++)
+	{
+		sample[k].label = (double *)malloc(mem_size);
+		for (int i = 0; i < classes_count; i++)
+		{
+			sample[k].label[i] = -0.8;
+		}
+
+		fread((char*)&label, sizeof(label), 1, fp);
+		sample[k].label[label] = 0.8;
+	}
+
+	fclose(fp);
+	fp = NULL;
+}
+//*-------------------------------------------------------------------------------------------------------/
+
+
 EFTYPE sample[41][4] =
 {
 	{ 0, 0, 0, 0 },
@@ -670,7 +775,6 @@ int test1() {
 	output.addNeural(1);
 
 	//data
-	/*
 	EFTYPE X[][2] = {
 		{0, 0},
 		{0, 1},
@@ -697,8 +801,9 @@ int test1() {
 	INT out_size = 1;
 	EFTYPE divx = 1.0;
 	EFTYPE divy = 1.0;
-	nets.Scale(divx, divy); */
+	nets.Scale(divx, divy); 
 
+		/*
 	EFTYPE X[][2] = {
 		{0.356649128, 0.030306376},
 		{0.105260929, 0.876207066},
@@ -752,14 +857,14 @@ int test1() {
 	INT out_size = 1;
 	EFTYPE divx = 1.0;
 	EFTYPE divy = 1.0;
-	nets.Scale(divx, divy);
+	nets.Scale(divx, divy);*/
 
 	int count = 0;
 	while (1) {
 		count++;
 
 		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.0001);
-		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.001, 3, 10);
+		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01, 3, 10);
 		sample_size++;
 		if (sample_size > 4) {
 			sample_size = 4;
@@ -813,9 +918,258 @@ int test1() {
 	}
 	return 0;
 }
+int test_sample() {
+
+	// 训练数据
+	Sample *train_sample = (Sample *)malloc(train_sample_count * sizeof(Sample));
+	memset(train_sample, 0, train_sample_count * sizeof(Sample));
+	train_sample->sample_w = width;
+	train_sample->sample_h = height;
+	train_sample->sample_count = train_sample_count;
+	read_mnist_data(train_sample, "./mnist/train-images.idx3-ubyte");
+	read_mnist_label(train_sample, "./mnist/train-labels.idx1-ubyte");
+
+	// 测试数据
+	Sample *test_sample = (Sample *)malloc(test_sample_count * sizeof(Sample));
+	memset(test_sample, 0, test_sample_count * sizeof(Sample));
+	test_sample->sample_w = width;
+	test_sample->sample_h = height;
+	test_sample->sample_count = test_sample_count;
+	read_mnist_data(test_sample, "./mnist/t10k-images.idx3-ubyte");
+	read_mnist_label(test_sample, "./mnist/t10k-labels.idx1-ubyte");
+
+	INT i, j, k;
+
+	Network nets(LayerMode::Input, LayerMode::Output);
+
+	//inputs
+	nets.input.addNeural(1);
+
+	//outputs
+	nets.output.addNeural(1);
+	nets.output.addNeural(2);
+	nets.output.addNeural(3);
+	nets.output.addNeural(4);
+	nets.output.addNeural(5);
+	nets.output.addNeural(6);
+	nets.output.addNeural(7);
+	nets.output.addNeural(8);
+	nets.output.addNeural(9);
+	nets.output.addNeural(10);
+
+	//layers
+	INT layers[][4] = {
+		{LayerMode::Input, 1, width, height},//input
+		{LayerMode::Conv, 6, 5, 5},//convolutional 1
+		{LayerMode::MaxPool, 6, 1, 1},//pooling 2
+		{LayerMode::Conv, 16, 5, 5},//convolutional 3
+		{LayerMode::MaxPool, 16, 1, 1},//pooling 4
+		{LayerMode::Conv, 120, 5, 5},//convolutional 5
+		{LayerMode::Output, 10, 1, 1},//output
+		{LayerMode::Normal, 10, 1, 1},//normal
+		{LayerMode::Normal, 10, 1, 1},//normal
+	};
+	for (i = 0; i < 6; i++) {
+		if (layers[i][0] == LayerMode::Input) {
+			continue;
+		}
+		Layer * hidden = new Layer((LayerMode)layers[i][0]);
+
+		//formula of perfect hidden num:
+		//sqrt(in_num + out_num) + a
+		//a is 5
+		for (j = 0; j < layers[i][1]; j++) {
+			hidden->addNeural(1 + j + (i + 1) * 1000);
+		}
+
+		nets.hiddens.insertLink(hidden);
+		nets.layers.insertLink(hidden, &nets.output, NULL);
+
+		hidden = nets.layers.link;
+		if (hidden) {
+			Layer * _hidden = nets.layers.next(hidden);
+			if (_hidden && _hidden != nets.layers.link) {
+				do {
+
+					printf("%p, %p->", hidden, _hidden);
+
+					hidden = _hidden;
+					_hidden = nets.layers.next(_hidden);
+				} while (_hidden && _hidden != nets.layers.link);
+				printf("\n");
+			}
+		}
+
+		hidden = nets.hiddens.link;
+		if (hidden) {
+			do {
+
+				printf("%p=>", hidden);
+
+				hidden = nets.hiddens.next(hidden);
+			} while (hidden && hidden != nets.hiddens.link);
+			printf("\n");
+		}
+	}
+
+	//make connections
+#define O true
+#define X false
+	bool connection_table[6 * 16] =
+	{
+		O, X, X, X, O, O, O, X, X, O, O, O, O, X, O, O,
+		O, O, X, X, X, O, O, O, X, X, O, O, O, O, X, O,
+		O, O, O, X, X, X, O, O, O, X, X, O, X, O, O, O,
+		X, O, O, O, X, X, O, O, O, O, X, X, O, X, O, O,
+		X, X, O, O, O, X, X, O, O, O, O, X, O, O, X, O,
+		X, X, X, O, O, O, X, X, O, O, O, O, X, O, O, O
+	};
+#undef O
+#undef X
+	Layer * hidden = nets.layers.link;
+	if (hidden) {
+		i = 0;
+		Layer * _hidden = nets.layers.next(hidden);
+		if (_hidden && _hidden != nets.layers.link) {
+			do {
+
+				if (hidden->neurals.linkcount == 16 && _hidden->neurals.linkcount == 6) {
+					hidden->makeConnection(*_hidden, ++i, connection_table);
+				}
+				else {
+					hidden->makeConnection(*_hidden, ++i);
+				}
+
+				hidden = _hidden;
+				_hidden = nets.layers.next(_hidden);
+			} while (_hidden && _hidden != nets.layers.link);
+		}
+	}
+
+	//make matrix
+	INT layer_index = 0;
+	hidden = nets.layers.link;
+	if (hidden) {
+		do {
+			hidden->makeMatrix(layers[layer_index][2], layers[layer_index][3]);
+			layer_index++;
+
+			hidden = nets.layers.next(hidden);
+		} while (hidden && hidden != nets.layers.link);
+	}
+
+	nets.Traverse();
+
+	//getch();
+
+	//test input
+	Layer input(LayerMode::Input);
+	input.addNeural(1);
+	Layer output(LayerMode::Output);
+	output.addNeural(1);
+	output.addNeural(2);
+	output.addNeural(3);
+	output.addNeural(4);
+	output.addNeural(5);
+	output.addNeural(6);
+	output.addNeural(7);
+	output.addNeural(8);
+	output.addNeural(9);
+	output.addNeural(10);
+
+	input.makeMatrix(width, height);
+	output.makeMatrix(1, 1);
+
+	INT sample_size = 30;
+	INT sample_size_real = train_sample_count;
+	INT in_size = train_sample->sample_w * train_sample->sample_h * sizeof(double);
+	INT out_size = 10;
+	EFTYPE divx = 1.0;
+	EFTYPE divy = 1.0;
+	nets.Scale(divx, divy);
+
+	int count = 0;
+	while (1) {
+		count++;
+
+		nets.Train(train_sample, sample_size, in_size, out_size, 0.0001);
+		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01, 3, 10);
+		sample_size++;
+		if (sample_size > 4) {
+			sample_size = 4;
+		}
+
+		//if (kbhit())
+		{
+			printf("Training: %d\n", count);
+			nets.Traverse();
+			while (1) {
+				INT ind;
+				while (scanf("%d", &ind) != 1) {
+					getchar();
+					fflush(stdin);
+				}
+				if (ind < 0 || ind >= sample_size_real) {
+					break;
+				}
+
+				input.setNeuralMatrix(train_sample[ind].data, in_size);
+				nets.Forecast(input, &output);
+				printf("\n");
+				/*
+				for (i = 0; i < in_size; i++) {
+					printf("%e ", train_sample[ind].data[i]);
+				}*/
+				printf("\n");
+				for (i = 0; i < out_size; i++) {
+					printf("%e ", train_sample[ind].label[i]);
+				}
+				printf("\n");
+				printf("Actual:\n");
+
+				Neural * neural = output.neurals.link;
+				EFTYPE e = 0;
+				i = 0;
+				if (neural) {
+					do {
+						printf("%e %e", train_sample[ind].label[i], neural->output);
+						EFTYPE f = train_sample[ind].label[i] - neural->output;
+						f = f * f / (2 * divy);
+						e += f;
+						printf(" error: %lf\n", f);
+						i++;
+
+						neural = output.neurals.next(neural);
+					} while (neural && neural != output.neurals.link);
+				}
+				printf("total error: %lf\n", e);
+			}
+		}
+	}
+	// 释放资源
+	for (int i = 0; i < train_sample_count; i++)
+	{
+		free(train_sample[i].data);
+		free(train_sample[i].label);
+		train_sample[i].data = NULL;
+		train_sample[i].label = NULL;
+	}
+	free(train_sample);
+
+	for (int i = 0; i < test_sample_count; i++)
+	{
+		free(test_sample[i].data);
+		free(test_sample[i].label);
+		test_sample[i].data = NULL;
+		test_sample[i].label = NULL;
+	}
+	free(test_sample);
+	return 0;
+}
 int main(int argc, _TCHAR* argv[])
 {
 	while (1) {
-		test1();
+		//test1();
+		test_sample();
 	}
 }

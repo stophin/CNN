@@ -35,6 +35,16 @@ public:
 		layers.insertLink(&input);
 		layers.insertLink(&output);
 	}
+	Network(LayerMode mode, LayerMode mode1) :
+		divrange(1),
+		divoutrange(1),
+		hiddens(0),
+		layers(1),
+		input(*(new Layer(mode))),
+		output(*(new Layer(mode1))) {
+		layers.insertLink(&input);
+		layers.insertLink(&output);
+	}
 	~Network() {
 		hiddens.~MultiLinkList();
 		layers.~MultiLinkList();
@@ -68,12 +78,16 @@ public:
 	}
 
 	void GetDelta() {
-		output.getDelta();
+		output.getDelta(output.mode);
 		Layer * _hidden = this->hiddens.prev(this->hiddens.link);
 		Layer * hidden = _hidden;
 		if (hidden) {
 			do {
-				hidden->getDelta();
+				Layer *__hidden = this->hiddens.next(hidden);
+				if (__hidden == this->hiddens.link) {
+					__hidden = &output;
+				}
+				hidden->getDelta(__hidden->mode);
 
 				hidden = this->hiddens.prev(hidden);
 			} while (hidden && hidden != _hidden);
@@ -250,6 +264,88 @@ public:
 			output.updateBiasWithBiasSum(size);
 
 			printf("[ 0]Error is: %e\r", error);
+			if (error < threshold) {
+				printf("\n");
+				break;
+			}
+		}
+	}
+
+	void Train(Sample* sample, int size, int in_size, int out_size, double threshold) {
+		EFTYPE error;
+		Layer * layer, *_hidden, *__hidden, *hidden;
+		while (true) {
+			//initialize delta sum
+			input.resetDeltaSum();
+			layer = hiddens.link;
+			if (layer) {
+				do {
+					layer->resetDeltaSum();
+
+					layer = hiddens.next(layer);
+				} while (layer && layer != hiddens.link);
+			}
+			output.resetBiasSum();
+
+
+
+			error = 0;
+			for (int iter = 0; iter < size; iter++) {
+				input.setNeuralMatrix(sample[iter].data, in_size);
+				output.setNeuralMatrix(sample[iter].label, out_size);
+				//output.setNeural(sample[iter].label, out_size);
+
+				input.setScale(1.0 / divrange);
+				output.setScale(1.0 / divoutrange);
+
+				ForwardTransfer();
+				output.getDelta(output.mode);
+				_hidden = this->hiddens.prev(this->hiddens.link);
+				hidden = _hidden;
+				if (hidden) {
+					do {
+						__hidden = this->hiddens.next(hidden);
+						if (__hidden == this->hiddens.link) {
+							__hidden = &output;
+						}
+						hidden->getDelta(__hidden->mode);
+
+						hidden = this->hiddens.prev(hidden);
+					} while (hidden && hidden != _hidden);
+				}
+				input.getDelta(hiddens.link->mode);
+
+				error += output.getError() * divrange * divoutrange;
+
+				output.updateDeltaSum(output.mode);
+				_hidden = this->hiddens.prev(this->hiddens.link);
+				hidden = _hidden;
+				if (hidden) {
+					do {
+						Layer *__hidden = this->hiddens.next(hidden);
+						if (__hidden == this->hiddens.link) {
+							__hidden = &output;
+						}
+						hidden->updateDeltaSum(__hidden->mode);
+
+						hidden = this->hiddens.prev(hidden);
+					} while (hidden && hidden != _hidden);
+				}
+				input.updateDeltaSum(hiddens.link->mode);
+			}
+
+			input.updateWeightWithDeltaSum(size);
+			layer = hiddens.link;
+			if (layer) {
+				do {
+					layer->updateWeightWithDeltaSum(size);
+
+					layer = hiddens.next(layer);
+				} while (layer && layer != hiddens.link);
+			}
+			output.updateBiasWithBiasSum(size);
+
+			printf("[ 0]Error is: %e\n", error);
 			if (error < threshold) {
 				printf("\n");
 				break;

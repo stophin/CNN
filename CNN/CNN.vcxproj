@@ -159,6 +159,7 @@
     <ClInclude Include="common\MultiLinkList.h" />
     <ClInclude Include="NN\CommonDefine.h" />
     <ClInclude Include="NN\Layer.h" />
+    <ClInclude Include="NN\mt19937ar.h" />
     <ClInclude Include="NN\Network.h" />
     <ClInclude Include="NN\Neural.h" />
     <ClInclude Include="NN\Convolute.h" />
@@ -167,6 +168,7 @@
   <ItemGroup>
     <ClCompile Include="CNN.cpp" />
     <ClCompile Include="common\MultiLinkList.cpp" />
+    <ClCompile Include="NN\mt19937ar.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

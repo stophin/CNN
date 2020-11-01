@@ -48,6 +48,9 @@
     <ClInclude Include="NN\Convolute.h">
       <Filter>头文件\NN</Filter>
     </ClInclude>
+    <ClInclude Include="NN\mt19937ar.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CNN.cpp">
@@ -55,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="common\MultiLinkList.cpp">
       <Filter>头文件\common</Filter>
+    </ClCompile>
+    <ClCompile Include="NN\mt19937ar.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

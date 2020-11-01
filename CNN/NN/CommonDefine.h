@@ -6,6 +6,8 @@
 
 #include "../common/MultiLinkList.h"
 
+#include "../NN/mt19937ar.h"
+
 //Define Maxium Hidden Layer
 #define MAX_HIDDEN_LAYER		5
 

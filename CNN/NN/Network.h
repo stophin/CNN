@@ -292,8 +292,7 @@ public:
 			error = 0;
 			for (int iter = 0; iter < size; iter++) {
 				input.setNeuralMatrix(sample[iter].data, in_size);
-				output.setNeuralMatrix(sample[iter].label, out_size);
-				//output.setNeural(sample[iter].label, out_size);
+				output.setNeural(sample[iter].label, out_size);
 
 				input.setScale(1.0 / divrange);
 				output.setScale(1.0 / divoutrange);

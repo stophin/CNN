@@ -46,10 +46,24 @@ public:
 		Neural * _neural = this->neurals.link;
 		if (_neural) {
 			do {
-				_neural->value = values[i];
-				i++;
-				if (i >= size) {
-					break;
+				if (this->mode == LayerMode::Normal) {
+					_neural->value = values[i];
+					i++;
+					if (i >= size) {
+						break;
+					}
+				}
+				else {
+					for (int j = 0; j < _neural->map_w * _neural->map_h; j++) {
+						_neural->map.label[j] = values[i];
+						i++;
+						if (i >= size) {
+							break;
+						}
+					}
+					if (i >= size) {
+						break;
+					}
 				}
 
 				_neural = this->neurals.next(_neural);
@@ -63,7 +77,7 @@ public:
 		if (_neural) {
 			do {
 
-				memcpy(_neural->map.data, data, mem_size);
+				//memcpy(_neural->map.data, data, mem_size);
 				memcpy(_neural->map.label, data, mem_size);
 
 				_neural = this->neurals.next(_neural);
@@ -94,8 +108,7 @@ public:
 						//when pooling/output, make sure one neural connect to only one neural
 						int do_connection = 1;
 						Layer * _layer = (Layer*)_neural->layer;
-						if ((_layer->mode >= LayerMode::MaxPool && _layer->mode <= LayerMode::AvgPool) ||
-							(_layer->mode == LayerMode::Output)) {
+						if ((_layer->mode >= LayerMode::MaxPool && _layer->mode <= LayerMode::AvgPool)) {
 							do_connection = 2;
 							if (_neural->conn.linkcount > 0) {
 								do_connection = 0;
@@ -143,7 +156,7 @@ public:
 						//for all neural that links before this neural
 						if (conn->forw == neural) {
 							_neural = conn->back;
-							break;
+							_neural->init_cnn_connector(conn, _neural, this->neurals.linkcount, kernel_w, kernel_h, this->mode);
 						}
 
 						conn = neural->conn.next(conn);
@@ -250,7 +263,7 @@ public:
 								else {
 									if (mode == LayerMode::Conv) {
 										convn_valid(_neural->map.data, _neural->map_w, _neural->map_h,
-											neural->kernel.W, neural->kernel_w, neural->kernel_h,
+											conn->kernel.W, conn->kernel_w, conn->kernel_h,
 											neural->map_common, neural->map_w, neural->map_h);
 									} else if (mode == LayerMode::MaxPool) {
 										for (int i = 0; i < neural->map_h; i++) {
@@ -271,7 +284,7 @@ public:
 												double sum = 0.0;
 												for (int n = 2 * i; n < 2 * (i + 1); n++) {
 													for (int m = 2 * j; m < 2 * (j + 1); m++) {
-														sum += _neural->map.data[n * _neural->map_w + m] * neural->kernel.W[0];
+														sum += _neural->map.data[n * _neural->map_w + m] * conn->kernel.W[0];
 													}
 												}
 												sum *= scale_factor;
@@ -281,7 +294,7 @@ public:
 										}
 									}
 									else if (mode == LayerMode::Output) {
-										t += _neural->map.data[0] * neural->kernel.W[0];
+										t += _neural->map.data[0] * conn->kernel.W[0];
 									}
 								}
 							}
@@ -324,6 +337,7 @@ public:
 					}
 					else {
 						//input_layer
+						memcpy(neural->map.data, neural->map.label, neural->map_w * neural->map_h * sizeof(double));
 					}
 				}
 
@@ -367,9 +381,9 @@ public:
 										for (int n = 0; n < _neural->map_h; n++) {
 											for (int m = 0; m < _neural->map_w; m++) {
 												double error = _neural->map.error[n * _neural->map_w + m];
-												for (int ky = 0; ky < _neural->kernel_h; ky++) {
-													for (int kx = 0; kx < _neural->kernel_w; kx++) {
-														neural->map_common[(n + ky) * neural->map_w + m + kx] += error * _neural->kernel.W[ky * _neural->kernel_w + kx];
+												for (int ky = 0; ky < conn->kernel_h; ky++) {
+													for (int kx = 0; kx < conn->kernel_w; kx++) {
+														neural->map_common[(n + ky) * neural->map_w + m + kx] += error * conn->kernel.W[ky * conn->kernel_w + kx];
 													}
 												}
 											}
@@ -398,10 +412,10 @@ public:
 									}
 									else if (mode == LayerMode::AvgPool) {
 										kronecker(_neural->map.error, neural->map_w, neural->map_h, neural->map_common, neural->map_w);
-										t += _neural->kernel.W[0];
+										t += conn->kernel.W[0];
 									}
 									else if (mode == LayerMode::Output) {
-										t += _neural->map.error[0] * _neural->kernel.W[0];
+										t += _neural->map.error[0] * conn->kernel.W[0];
 									}
 									else if (mode == LayerMode::Normal) {
 										t += _neural->delta;
@@ -566,7 +580,6 @@ public:
 				if (mode == LayerMode::Normal) {
 				}
 				else {
-					k_size = neural->kernel_w * neural->kernel_h;
 				}
 				conn = neural->conn.link;
 				if (conn) {
@@ -579,6 +592,8 @@ public:
 									_neural->deltaSum = 0;
 								}
 								else {
+									k_size = conn->kernel_w * conn->kernel_h;
+									memset(conn->kernel.dW, 0, k_size * sizeof(double));
 								}
 							}
 						}
@@ -591,7 +606,6 @@ public:
 				}
 				else {
 					neural->map.db = 0;
-					memset(neural->kernel.dW, 0, k_size * sizeof(double));
 				}
 
 				neural = this->neurals.next(neural);
@@ -650,7 +664,7 @@ public:
 									if (mode == LayerMode::Conv) {
 										convn_valid(neural->map.data, neural->map_w, neural->map_h,
 											_neural->map.error, _neural->map_w, _neural->map_h,
-											_neural->kernel.dW, _neural->kernel_w, _neural->kernel_h);
+											conn->kernel.dW, conn->kernel_w, conn->kernel_h);
 									}
 									else if (mode == LayerMode::MaxPool) {
 									}
@@ -659,10 +673,10 @@ public:
 										for (int i = 0; i < size; i++) {
 											sum += neural->map.data[i] * neural->map_common[i];
 										}
-										_neural->kernel.dW[0] += sum * scale_factor;
+										conn->kernel.dW[0] += sum * scale_factor;
 									}
 									else if (mode == LayerMode::Output) {
-										_neural->kernel.dW[0] += _neural->map.error[0] * neural->map.data[0];
+										conn->kernel.dW[0] += _neural->map.error[0] * neural->map.data[0];
 									}
 								}
 								c++;
@@ -766,7 +780,6 @@ public:
 				if (mode == LayerMode::Normal) {
 				}
 				else {
-					k_size = neural->kernel_w * neural->kernel_h;
 				}
 				conn = neural->conn.link;
 				if (conn) {
@@ -779,6 +792,10 @@ public:
 									conn->weight -= ETA_W * _neural->deltaSum / size;
 								}
 								else {
+									k_size = conn->kernel_w * conn->kernel_h;
+									for (int i = 0; i < k_size; i++) {
+										conn->kernel.W[i] = gradient_descent(conn->kernel.W[i], conn->kernel.dW[i] / size, ETA_W, lambda);
+									}
 								}
 							}
 						}
@@ -790,9 +807,6 @@ public:
 					neural->bias -= ETA_W * neural->biasSum / size;
 				}
 				else {
-					for (int i = 0; i < k_size; i++) {
-						neural->kernel.W[i] = gradient_descent(neural->kernel.W[i], neural->kernel.dW[i] / size, ETA_W, lambda);
-					}
 					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, ETA_W, lambda);
 				}
 

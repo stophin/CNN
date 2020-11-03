@@ -58,12 +58,24 @@ public:
 	~Connector() {
 		back = NULL;
 		forw = NULL;
+		uninit_cnn_neural();
 	}
 
 	Neural * back;
 	Neural * forw;
 
 	EFTYPE weight;
+
+	int kernel_w;
+	int kernel_h;
+	Kernel kernel;
+
+	void uninit_cnn_neural() {
+		free(this->kernel.W);
+		free(this->kernel.dW);
+		this->kernel.W = NULL;
+		this->kernel.dW = NULL;
+	}
 
 	// for multilinklist
 	// The number of Connectors will be the max hidden layer numbers + 1
@@ -126,10 +138,6 @@ public:
 	int map_count;
 	Map map;
 
-	int kernel_w;
-	int kernel_h;
-	Kernel kernel;
-
 	double *map_common;
 
 	void init_cnn_neural(Neural* neural, int map_count, int kernel_w, int kernel_h, int mode) {
@@ -177,19 +185,6 @@ public:
 		int denominator = fan_in + fan_out;
 		double weight_base = (denominator != 0) ? sqrt(scale / (double)denominator) : 0.5;
 
-		this->kernel_w = kernel_w;
-		this->kernel_h = kernel_h;
-		mem_size = this->kernel_w * this->kernel_h * sizeof(double);
-		if (mem_size > 0) {
-			this->kernel.W = (double*)malloc(mem_size);
-			int size = this->kernel_w*this->kernel_h;
-			for (int i = 0; i < size; i++)
-			{
-				this->kernel.W[i] = (genrand_real1() - 0.5) * 2 * weight_base; //0.5;// ((2.0*(double)rand() / RAND_MAX) - 1)* weight_base;
-			}
-			this->kernel.dW = (double *)malloc(mem_size);
-			memset(this->kernel.dW, 0, mem_size);
-		}
 
 		this->map_count = map_count;
 		this->map_w = map_w;
@@ -210,10 +205,6 @@ public:
 	}
 
 	void uninit_cnn_neural() {
-		free(this->kernel.W);
-		free(this->kernel.dW);
-		this->kernel.W = NULL;
-		this->kernel.dW = NULL;
 
 		free(this->map.data);
 		free(this->map.label);
@@ -224,6 +215,68 @@ public:
 		free(this->map_common);
 		this->map_common = NULL;
 	}
+
+	void init_cnn_connector(Connector *connector, Neural* neural, int map_count, int kernel_w, int kernel_h, int mode) {
+		int prevlayer_map_count = 0;
+		int map_w = 0, map_h = 0;
+		if (neural == NULL) {
+			//input layer
+			prevlayer_map_count = 0;
+			map_w = kernel_w;
+			map_h = kernel_h;
+			kernel_w = 0;
+			kernel_h = 0;
+		}
+		else {
+			prevlayer_map_count = neural->map_count;
+			if (mode == LayerMode::Conv) {
+				map_w = neural->map_w - kernel_w + 1;
+				map_h = neural->map_h - kernel_h + 1;
+			}
+			else if (mode == LayerMode::Output) {
+				map_w = 1;
+				map_h = 1;
+			}
+			else {//pooling
+				map_w = neural->map_w / 2;
+				map_h = neural->map_h / 2;
+			}
+		}
+		int mem_size = 0;
+
+		const double scale = 6.0;
+		int fan_in = 0;
+		int fan_out = 0;
+		//is pooling
+		if (mode >= LayerMode::MaxPool && mode <= LayerMode::AvgPool)
+		{
+			fan_in = 4;
+			fan_out = 1;
+		}
+		else
+		{
+			fan_in = prevlayer_map_count * kernel_w * kernel_h;
+			fan_out = map_count * kernel_w * kernel_h;
+		}
+		int denominator = fan_in + fan_out;
+		double weight_base = (denominator != 0) ? sqrt(scale / (double)denominator) : 0.5;
+
+		connector->kernel_w = kernel_w;
+		connector->kernel_h = kernel_h;
+		mem_size = connector->kernel_w * connector->kernel_h * sizeof(double);
+		if (mem_size > 0) {
+			connector->kernel.W = (double*)malloc(mem_size);
+			int size = connector->kernel_w*connector->kernel_h;
+			for (int i = 0; i < size; i++)
+			{
+				connector->kernel.W[i] = (genrand_real1() - 0.5) * 2 * weight_base; //0.5;// ((2.0*(double)rand() / RAND_MAX) - 1)* weight_base;
+			}
+			connector->kernel.dW = (double *)malloc(mem_size);
+			memset(connector->kernel.dW, 0, mem_size);
+		}
+
+	}
+
 
 	MultiLinkList<Connector> conn;
 

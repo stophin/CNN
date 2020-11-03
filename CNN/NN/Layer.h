@@ -77,8 +77,8 @@ public:
 		if (_neural) {
 			do {
 
-				//memcpy(_neural->map.data, data, mem_size);
-				memcpy(_neural->map.label, data, mem_size);
+				//memcpy(_neural->map.data, data, mem_size * sizeof(double));
+				memcpy(_neural->map.label, data, mem_size * sizeof(double));
 
 				_neural = this->neurals.next(_neural);
 			} while (_neural && _neural != this->neurals.link);

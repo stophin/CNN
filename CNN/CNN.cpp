@@ -1082,7 +1082,7 @@ int test_sample() {
 
 	INT sample_size = 30;
 	INT sample_size_real = train_sample_count;
-	INT in_size = train_sample->sample_w * train_sample->sample_h * sizeof(double);
+	INT in_size = train_sample->sample_w * train_sample->sample_h;
 	INT out_size = 10;
 	EFTYPE divx = 1.0;
 	EFTYPE divy = 1.0;
@@ -1092,7 +1092,7 @@ int test_sample() {
 	while (1) {
 		count++;
 
-		nets.Train(train_sample, sample_size, in_size, out_size, 0.0001);
+		nets.Train(train_sample, sample_size, in_size, out_size, 0.01);
 		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01, 3, 10);
 		sample_size++;
 		if (sample_size > 4) {
@@ -1113,7 +1113,8 @@ int test_sample() {
 					break;
 				}
 
-				input.setNeuralMatrix(train_sample[ind].data, in_size);
+				nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+				nets.output.setNeural(test_sample[ind].label, out_size);
 				nets.Forecast(input, &output);
 				printf("\n");
 				/*
@@ -1127,20 +1128,19 @@ int test_sample() {
 				printf("\n");
 				printf("Actual:\n");
 
-				Neural * neural = output.neurals.link;
+				Neural * neural = nets.output.neurals.link;
 				EFTYPE e = 0;
-				i = 0;
 				if (neural) {
 					do {
-						printf("%e %e", train_sample[ind].label[i], neural->output);
-						EFTYPE f = train_sample[ind].label[i] - neural->output;
+						printf("%e %e", neural->map.label[0], neural->map.data[0]);
+						EFTYPE f = neural->map.label[0] - neural->map.data[0];
 						f = f * f / (2 * divy);
 						e += f;
 						printf(" error: %lf\n", f);
 						i++;
 
-						neural = output.neurals.next(neural);
-					} while (neural && neural != output.neurals.link);
+						neural = nets.output.neurals.next(neural);
+					} while (neural && neural != nets.output.neurals.link);
 				}
 				printf("total error: %lf\n", e);
 			}

@@ -54,6 +54,8 @@ public:
 		back(NULL),
 		forw(NULL),
 		weight(v){
+		kernel.W = NULL;
+		kernel.dW = NULL;
 	}
 	~Connector() {
 		back = NULL;
@@ -71,10 +73,14 @@ public:
 	Kernel kernel;
 
 	void uninit_cnn_neural() {
-		free(this->kernel.W);
-		free(this->kernel.dW);
-		this->kernel.W = NULL;
-		this->kernel.dW = NULL;
+		if (this->kernel.W) {
+			free(this->kernel.W);
+			this->kernel.W = NULL;
+		}
+		if (this->kernel.dW) {
+			free(this->kernel.dW);
+			this->kernel.dW = NULL;
+		}
 	}
 
 	// for multilinklist
@@ -109,6 +115,10 @@ public:
 		bias(0),
 		conn(0),
 		sum(0){
+		map_common = NULL;
+		map.data = NULL;
+		map.error = NULL;
+		map.label = NULL;
 	}
 	~Neural() {
 		conn.~MultiLinkList();
@@ -206,14 +216,22 @@ public:
 
 	void uninit_cnn_neural() {
 
-		free(this->map.data);
-		free(this->map.label);
-		free(this->map.error);
-		this->map.data = NULL;
-		this->map.label = NULL;
-		this->map.error = NULL;
-		free(this->map_common);
-		this->map_common = NULL;
+		if (this->map.data) {
+			free(this->map.data);
+			this->map.data = NULL;
+		}
+		if (this->map.label) {
+			free(this->map.label);
+			this->map.label = NULL;
+		}
+		if (this->map.error) {
+			free(this->map.error);
+			this->map.error = NULL;
+		}
+		if (this->map_common) {
+			free(this->map_common);
+			this->map_common = NULL;
+		}
 	}
 
 	void init_cnn_connector(Connector *connector, Neural* neural, int map_count, int kernel_w, int kernel_h, int mode) {

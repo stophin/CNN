@@ -67,10 +67,13 @@ public:
 	Neural * forw;
 
 	EFTYPE weight;
+	EFTYPE deltaSum;
+	EFTYPE *_deltaSum;
 
 	int kernel_w;
 	int kernel_h;
 	Kernel kernel;
+	Kernel *_kernel;
 
 	void uninit_cnn_neural() {
 		if (this->kernel.W) {
@@ -133,10 +136,8 @@ public:
 	EFTYPE sum;
 
 	EFTYPE biasSum;
-	EFTYPE deltaSum;
 
 	//the following is for multi thread
-	EFTYPE *_deltaSum;
 	EFTYPE *_biasSum;
 	EFTYPE *_delta;
 	EFTYPE *_value;
@@ -147,8 +148,10 @@ public:
 	int map_h;
 	int map_count;
 	Map map;
+	Map *_map;
 
 	double *map_common;
+	double **_map_common;
 
 	void init_cnn_neural(Neural* neural, int map_count, int kernel_w, int kernel_h, int mode) {
 		int prevlayer_map_count = 0;
@@ -212,6 +215,7 @@ public:
 			this->map_common = (double *)malloc(mem_size);
 			memset(this->map_common, 0, mem_size);
 		}
+		this->_map = NULL;
 	}
 
 	void uninit_cnn_neural() {
@@ -292,7 +296,7 @@ public:
 			connector->kernel.dW = (double *)malloc(mem_size);
 			memset(connector->kernel.dW, 0, mem_size);
 		}
-
+		connector->_kernel = NULL;
 	}
 
 

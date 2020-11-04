@@ -863,7 +863,7 @@ int test1() {
 	while (1) {
 		count++;
 
-		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.0001);
+		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01);
 		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01, 3, 10);
 		sample_size++;
 		if (sample_size > 4) {
@@ -1092,8 +1092,8 @@ int test_sample() {
 	while (1) {
 		count++;
 
-		nets.Train(train_sample, sample_size, in_size, out_size, 0.01);
-		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01, 3, 10);
+		//nets.TrainCNN(train_sample, sample_size, in_size, out_size, 0.1);
+		nets.TrainCNN(train_sample, sample_size, in_size, out_size, 0.01, 3, 10);
 		sample_size++;
 		if (sample_size > 4) {
 			sample_size = 4;
@@ -1113,18 +1113,16 @@ int test_sample() {
 					break;
 				}
 
-				nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
-				nets.output.setNeural(test_sample[ind].label, out_size);
+				//nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+				//nets.output.setNeural(test_sample[ind].label, out_size);
+				nets.input.setNeuralMatrix(train_sample[ind].data, in_size);
+				nets.output.setNeural(train_sample[ind].label, out_size);
 				nets.Forecast(input, &output);
 				printf("\n");
 				/*
 				for (i = 0; i < in_size; i++) {
 					printf("%e ", train_sample[ind].data[i]);
 				}*/
-				printf("\n");
-				for (i = 0; i < out_size; i++) {
-					printf("%e ", train_sample[ind].label[i]);
-				}
 				printf("\n");
 				printf("Actual:\n");
 
@@ -1169,7 +1167,7 @@ int test_sample() {
 int main(int argc, _TCHAR* argv[])
 {
 	while (1) {
-		//test1();
-		test_sample();
+		test1();
+		//test_sample();
 	}
 }

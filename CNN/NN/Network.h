@@ -15,6 +15,7 @@ struct ThreadParam{
 	int end;
 	double** X;
 	double** Y;
+	Sample * sample;
 	int tc;
 	void *nets;
 	HANDLE_MUTEX mutex;
@@ -271,7 +272,7 @@ public:
 		}
 	}
 
-	void Train(Sample* sample, int size, int in_size, int out_size, double threshold) {
+	void TrainCNN(Sample* sample, int size, int in_size, int out_size, double threshold) {
 		EFTYPE error;
 		Layer * layer, *_hidden, *__hidden, *hidden;
 		while (true) {
@@ -312,7 +313,7 @@ public:
 						hidden = this->hiddens.prev(hidden);
 					} while (hidden && hidden != _hidden);
 				}
-				input.getDelta(hiddens.link->mode);
+				input.getDelta(this->hiddens.link->mode);
 
 				error += output.getError() * divrange * divoutrange;
 
@@ -330,7 +331,7 @@ public:
 						hidden = this->hiddens.prev(hidden);
 					} while (hidden && hidden != _hidden);
 				}
-				input.updateDeltaSum(hiddens.link->mode);
+				input.updateDeltaSum(this->hiddens.link->mode);
 			}
 
 			input.updateWeightWithDeltaSum(size);
@@ -673,6 +674,364 @@ public:
 			} while (layer && layer != hiddens.link);
 		}
 		output.resetDelta(tc, 2);
+		//delete thread
+		delete[]params;
+	}
+
+
+
+	static __NANOC_THREAD_FUNC_BEGIN__(TrainCNNThread) {
+		ThreadParam *param = (ThreadParam*)pv;
+		int tid = param->tid;
+		int in_size = param->in_size;
+		int out_size = param->out_size;
+		int start = param->start;
+		int end = param->end;
+		Sample * sample = param->sample;
+		Network * nets = (Network*)param->nets;
+		HANDLE_MUTEX &mutex = param->mutex;
+		HANDLE_MUTEX &main_mutex = param->main_mutex;
+		Layer &input = nets->input;
+		Layer &output = nets->output;
+		Layer * hidden, *_hidden, *layer, *__hidden;
+		EFTYPE divrange = nets->divrange;
+		EFTYPE divoutrange = nets->divoutrange;
+		EFTYPE &error = param->error;
+
+		while (true) {
+			__NANOC_THREAD_MUTEX_LOCK__(mutex);
+			tid = param->tid;
+			if (tid < 0) {
+				__NANOC_THREAD_MUTEX_UNLOCK__(mutex);
+				__NANOC_THREAD_MUTEX_UNLOCK__(main_mutex);
+				break;
+			}
+			//printf("tid:%d\n", tid);
+			for (int iter = start; iter < end; iter++) {
+				input.setNeuralMatrix(sample[iter].data, in_size, tid);
+				output.setNeural(sample[iter].label, out_size, tid);
+
+				input.setScale(1.0 / divrange, tid);
+				output.setScale(1.0 / divoutrange, tid);
+
+				//ForwardTransfer();
+				input.getOutput(tid);
+				hidden = nets->hiddens.link;
+				if (hidden) {
+					do {
+						hidden->getOutput(tid);
+
+						hidden = nets->hiddens.next(hidden);
+					} while (hidden && hidden != nets->hiddens.link);
+				}
+				output.getOutput(tid);
+				//GetDelta();
+				output.getDelta(tid, output.mode);
+				_hidden = nets->hiddens.prev(nets->hiddens.link);
+				hidden = _hidden;
+				if (hidden) {
+					do {
+						__hidden = nets->hiddens.next(hidden);
+						if (__hidden == nets->hiddens.link) {
+							__hidden = &output;
+						}
+						hidden->getDelta(tid, __hidden->mode);
+
+						hidden = nets->hiddens.prev(hidden);
+					} while (hidden && hidden != _hidden);
+				}
+				input.getDelta(tid, nets->hiddens.link->mode);
+
+				error += output.getError(tid) * divrange * divoutrange;
+
+				output.updateDeltaSum(tid, output.mode);
+				_hidden = nets->hiddens.prev(nets->hiddens.link);
+				hidden = _hidden;
+				if (hidden) {
+					do {
+						Layer *__hidden = nets->hiddens.next(hidden);
+						if (__hidden == nets->hiddens.link) {
+							__hidden = &output;
+						}
+						hidden->updateDeltaSum(tid, __hidden->mode);
+
+						hidden = nets->hiddens.prev(hidden);
+					} while (hidden && hidden != _hidden);
+				}
+				input.updateDeltaSum(tid, nets->hiddens.link->mode);
+			}
+			__NANOC_THREAD_MUTEX_UNLOCK__(main_mutex);
+		}
+
+		__NANOC_THREAD_FUNC_END__(0);
+	}
+
+	void TrainCNN(Sample *sample, int size, int in_size, int out_size, double threshold, int thx, int thy) {
+		int tc = thx * thy;
+		EFTYPE error;
+		Layer * layer;
+		Layer * hidden, *_hidden;
+		//alloc and initialize map and kernel, must be called first
+		input.resetMapKernel(tc, 1);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetMapKernel(tc, 1);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetMapKernel(tc, 1);
+		//alloc and initialize delta sum
+		input.resetDeltaSum(tc, 1);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetDeltaSum(tc, 1);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetBiasSum(tc, 1);
+		//alloc and initialize neural
+		input.resetNeural(tc, 1);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetNeural(tc, 1);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetNeural(tc, 1);
+		//alloc and initialze delta
+		input.resetDelta(tc, 1);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetDelta(tc, 1);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetDelta(tc, 1);
+
+		//init thread
+		ThreadParam * params = new ThreadParam[tc];
+		int div = size / tc;
+		int divl = size - div * tc;
+		int divd = 0;
+		for (int i = 0; i < tc; i++) {
+			params[i].tid = i;
+			params[i].size = size;
+			params[i].in_size = in_size;
+			params[i].out_size = out_size;
+			params[i].sample = sample;
+			params[i].tc = tc;
+			params[i].nets = this;
+			params[i].start = (div > 0 ? div * i + divd : i);
+			params[i].end = params[i].start + div;
+			if (divl > 0) {
+				params[i].end++;
+				divl--;
+				divd++;
+			}
+			__NANOC_THREAD_MUTEX_INIT__(mutex, (&params[i]));
+			__NANOC_THREAD_MUTEX_INIT__(main_mutex, (&params[i]));
+			__NANOC_THREAD_MUTEX_LOCK__(params[i].mutex);
+			__NANOC_THREAD_MUTEX_LOCK__(params[i].main_mutex);
+			__NANOC_THREAD_BEGIN__(params[i].thread, TrainCNNThread, &params[i]);
+			printf("%d %d %d\n", i, params[i].start, params[i].end);
+		}
+		getch();
+
+		int count = 0;
+		while (true) {
+			//initialze alloced delta sum
+			input.resetDeltaSum(tc, 0);
+			layer = hiddens.link;
+			if (layer) {
+				do {
+					layer->resetDeltaSum(tc, 0);
+
+					layer = hiddens.next(layer);
+				} while (layer && layer != hiddens.link);
+			}
+			output.resetBiasSum(tc, 0);
+			//initialize delta sum
+			input.resetDeltaSum();
+			layer = hiddens.link;
+			if (layer) {
+				do {
+					layer->resetDeltaSum();
+
+					layer = hiddens.next(layer);
+				} while (layer && layer != hiddens.link);
+			}
+			output.resetBiasSum();
+
+			/*
+			int tid = 0;
+			error = 0;
+			for (int iter = 0; iter < size; iter++) {
+				input.setNeural((double*)((double*)X + iter * in_size), in_size, tid);
+				output.setNeural((double*)((double*)Y + iter * out_size), out_size, tid);
+
+				input.setScale(1.0 / divrange, tid);
+				output.setScale(1.0 / divoutrange, tid);
+
+				//ForwardTransfer();
+				input.getOutput(tid);
+				hidden = this->hiddens.link;
+				if (hidden) {
+					do {
+						hidden->getOutput(tid);
+
+						hidden = this->hiddens.next(hidden);
+					} while (hidden && hidden != this->hiddens.link);
+				}
+				output.getOutput(tid);
+				//GetDelta();
+				output.getDelta(tid);
+				_hidden = this->hiddens.prev(this->hiddens.link);
+				hidden = _hidden;
+				if (hidden) {
+					do {
+						hidden->getDelta(tid);
+
+						hidden = this->hiddens.prev(hidden);
+					} while (hidden && hidden != _hidden);
+				}
+
+				error += output.getError(tid) * divrange * divoutrange;
+
+				input.updateDeltaSum(tid);
+				layer = hiddens.link;
+				if (layer) {
+					do {
+						layer->updateDeltaSum(tid);
+
+						layer = hiddens.next(layer);
+					} while (layer && layer != hiddens.link);
+				}
+				output.updateBiasSum(tid);
+			}*/
+			//reset error
+			error = 0;
+			for (int i = 0; i < tc; i++) {
+				params[i].error = 0;
+			}
+
+			//release sem
+			for (int i = 0; i < tc; i++) {
+				__NANOC_THREAD_MUTEX_UNLOCK__(params[i].mutex);
+			}
+
+			//wait for sem
+			for (int i = 0; i < tc; i++) {
+				__NANOC_THREAD_MUTEX_LOCK__(params[i].main_mutex);
+			}
+
+			//accumulate error
+			for (int i = 0; i < tc; i++) {
+				error += params[i].error;
+			}
+
+			//accumulate delta sum
+			input.accumulateDeltaSum(tc);
+			layer = hiddens.link;
+			if (layer) {
+				do {
+					layer->accumulateDeltaSum(tc);
+
+					layer = hiddens.next(layer);
+				} while (layer && layer != hiddens.link);
+			}
+			output.accumulateDeltaSum(tc);
+
+
+			input.updateWeightWithDeltaSum(size);
+			layer = hiddens.link;
+			if (layer) {
+				do {
+					layer->updateWeightWithDeltaSum(size);
+
+					layer = hiddens.next(layer);
+				} while (layer && layer != hiddens.link);
+			}
+			output.updateBiasWithBiasSum(size);
+
+			printf("[ %d]Error is: %e\r", count, error);
+			count++;
+			if (error < threshold) {
+				printf("\n");
+				break;
+			}
+		}
+		//release sem
+		for (int i = 0; i < tc; i++) {
+			//send end singal
+			params[i].tid = -1;
+			__NANOC_THREAD_MUTEX_UNLOCK__(params[i].mutex);
+		}
+
+		//wait for sem
+		for (int i = 0; i < tc; i++) {
+			__NANOC_THREAD_MUTEX_LOCK__(params[i].main_mutex);
+		}
+		//wait thread
+		for (int i = 0; i < tc; i++) {
+			__NANOC_THREAD_WAIT__(params[i].thread);
+		}
+		//end thread
+		for (int i = 0; i < tc; i++) {
+			__NANOC_THREAD_END__(params[i].thread);
+		}
+
+		//unalloc delta sum
+		input.resetDeltaSum(tc, 2);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetDeltaSum(tc, 2);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetBiasSum(tc, 2);
+		//unalloc neural
+		input.resetNeural(tc, 2);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetNeural(tc, 2);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetNeural(tc, 2);
+		//unalloc delta
+		input.resetDelta(tc, 2);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetDelta(tc, 2);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetDelta(tc, 2);
+		//unalloc map kernel, must be called last
+		input.resetMapKernel(tc, 2);
+		layer = hiddens.link;
+		if (layer) {
+			do {
+				layer->resetMapKernel(tc, 2);
+
+				layer = hiddens.next(layer);
+			} while (layer && layer != hiddens.link);
+		}
+		output.resetMapKernel(tc, 2);
 		//delete thread
 		delete[]params;
 	}

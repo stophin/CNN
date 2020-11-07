@@ -216,6 +216,7 @@ public:
 			memset(this->map_common, 0, mem_size);
 		}
 		this->_map = NULL;
+		this->_map_common = NULL;
 	}
 
 	void uninit_cnn_neural() {

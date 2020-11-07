@@ -1167,7 +1167,7 @@ int test_sample() {
 int main(int argc, _TCHAR* argv[])
 {
 	while (1) {
-		test1();
-		//test_sample();
+		//test1();
+		test_sample();
 	}
 }

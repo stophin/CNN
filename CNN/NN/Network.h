@@ -496,7 +496,7 @@ public:
 			__NANOC_THREAD_BEGIN__(params[i].thread, TrainThread, &params[i]);
 			printf("%d %d %d\n", i, params[i].start, params[i].end);
 		}
-		getch();
+		//getch();
 
 		int count = 0;
 		while (true) {
@@ -843,7 +843,7 @@ public:
 			__NANOC_THREAD_BEGIN__(params[i].thread, TrainCNNThread, &params[i]);
 			printf("%d %d %d\n", i, params[i].start, params[i].end);
 		}
-		getch();
+		//getch();
 
 		int count = 0;
 		while (true) {

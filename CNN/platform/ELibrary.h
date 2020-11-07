@@ -10,7 +10,9 @@
 #define _ELIBRARY_H_
 
 
+#ifndef _NANO_LINUX_
 #define _NANOC_WINDOWS_
+#endif
 
 #define _THREAD_SEM_
 
@@ -128,13 +130,14 @@ int getch(void)
 #define min(x, y) (x > y ? y : x)
 #define max(x, y) (x > y ? x : y)
 
+#define fopen_s(fp, filename, mode) *fp = fopen(filename, mode)
+#include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <signal.h>
 
 typedef void * HINSTANCE;
 typedef pthread_t HANDLE;
-typedef pthread_mutex_t HANDLE_MUTEX;
 #define __NANOC_THREAD_FUNC_DECLARE(hHandle, pFuncName)\
 	private:\
 	HANDLE hHandle; \
@@ -147,6 +150,7 @@ typedef pthread_mutex_t HANDLE_MUTEX;
 #define __NANOC_THREAD_END__(hHandle) pthread_kill(hHandle, 0)
 
 #ifndef _THREAD_SEM_
+typedef pthread_mutex_t HANDLE_MUTEX;
 #define __NANOC_THREAD_MUTEX_INIT__(hMutex, obj) pthread_mutex_init(&obj->hMutex, NULL)
 #define __NANOC_THREAD_MUTEX_LOCK__(hMutex)  pthread_mutex_lock(&hMutex)
 #define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) pthread_mutex_unlock(&hMutex)

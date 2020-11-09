@@ -1057,6 +1057,8 @@ public:
 		}
 		output.resetMapKernel(tc, 2);
 		//delete thread
+		delete[] indice;
+		delete[] indice_root;
 		delete[]params;
 	}
 

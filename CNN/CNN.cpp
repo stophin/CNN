@@ -1080,8 +1080,8 @@ int test_sample() {
 	input.makeMatrix(width, height);
 	output.makeMatrix(1, 1);
 
-	INT sample_size = 30;
-	INT sample_size_real = train_sample_count;
+	INT sample_size = train_sample_count;
+	INT sample_size_real = test_sample_count;
 	INT in_size = train_sample->sample_w * train_sample->sample_h;
 	INT out_size = 10;
 	EFTYPE divx = 1.0;
@@ -1092,12 +1092,8 @@ int test_sample() {
 	while (1) {
 		count++;
 
-		//nets.TrainCNN(train_sample, sample_size, in_size, out_size, 0.1);
-		nets.TrainCNN(train_sample, sample_size, in_size, out_size, 0.01, 3, 10);
-		sample_size++;
-		if (sample_size > 4) {
-			sample_size = 4;
-		}
+		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
+		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
 
 		//if (kbhit())
 		{
@@ -1113,10 +1109,10 @@ int test_sample() {
 					break;
 				}
 
-				//nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
-				//nets.output.setNeural(test_sample[ind].label, out_size);
-				nets.input.setNeuralMatrix(train_sample[ind].data, in_size);
-				nets.output.setNeural(train_sample[ind].label, out_size);
+				nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+				nets.output.setNeural(test_sample[ind].label, out_size);
+				//nets.input.setNeuralMatrix(train_sample[ind].data, in_size);
+				//nets.output.setNeural(train_sample[ind].label, out_size);
 				nets.Forecast(input, &output);
 				printf("\n");
 				/*
@@ -1128,6 +1124,9 @@ int test_sample() {
 
 				Neural * neural = nets.output.neurals.link;
 				EFTYPE e = 0;
+				int result = -1;
+				int predict = -1;
+				i = 0;
 				if (neural) {
 					do {
 						printf("%e %e", neural->map.label[0], neural->map.data[0]);
@@ -1136,10 +1135,17 @@ int test_sample() {
 						e += f;
 						printf(" error: %lf\n", f);
 						i++;
+						if (neural->map.label[0] > 0) {
+							result = i;
+						}
+						if (neural->map.data[0] > 0) {
+							predict = i;
+						}
 
 						neural = nets.output.neurals.next(neural);
 					} while (neural && neural != nets.output.neurals.link);
 				}
+				printf("%d %d\n", result, predict);
 				printf("total error: %lf\n", e);
 			}
 		}

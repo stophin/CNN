@@ -11,6 +11,7 @@ struct ThreadParam{
 	int size;
 	int in_size;
 	int out_size;
+	int* indice;
 	int start;
 	int end;
 	double** X;
@@ -708,8 +709,9 @@ public:
 			}
 			//printf("tid:%d\n", tid);
 			for (int iter = start; iter < end; iter++) {
-				input.setNeuralMatrix(sample[iter].data, in_size, tid);
-				output.setNeural(sample[iter].label, out_size, tid);
+				int ind = param->indice[iter];
+				input.setNeuralMatrix(sample[ind].data, in_size, tid);
+				output.setNeural(sample[ind].label, out_size, tid);
 
 				input.setScale(1.0 / divrange, tid);
 				output.setScale(1.0 / divoutrange, tid);
@@ -766,7 +768,7 @@ public:
 		__NANOC_THREAD_FUNC_END__(0);
 	}
 
-	void TrainCNN(Sample *sample, int size, int in_size, int out_size, double threshold, int thx, int thy) {
+	void TrainCNN(Sample *sample, int size, int train_size, int in_size, int out_size, double threshold, int thx, int thy) {
 		int tc = thx * thy;
 		EFTYPE error;
 		Layer * layer;
@@ -818,6 +820,8 @@ public:
 
 		//init thread
 		ThreadParam * params = new ThreadParam[tc];
+		int *indice = new int[size];
+		int *indice_root = new int[train_size];
 		int div = size / tc;
 		int divl = size - div * tc;
 		int divd = 0;
@@ -831,6 +835,7 @@ public:
 			params[i].nets = this;
 			params[i].start = (div > 0 ? div * i + divd : i);
 			params[i].end = params[i].start + div;
+			params[i].indice = indice;
 			if (divl > 0) {
 				params[i].end++;
 				divl--;
@@ -845,8 +850,21 @@ public:
 		}
 		//getch();
 
+		//randomize
+		srand(time(NULL));
+		for (int i = 0; i < train_size; i++) {
+			indice_root[i] = i;
+		}
+		for (int i = train_size - 1; i > 0; i--) {
+			int ind = rand() % i;
+			int t = indice_root[i];
+			indice_root[i] = indice_root[ind];
+			indice_root[ind] = t;
+		}
+
 		int count = 0;
-		while (true) {
+		int count_div = train_size / size;
+		while (count < count_div) {
 			//initialze alloced delta sum
 			input.resetDeltaSum(tc, 0);
 			layer = hiddens.link;
@@ -922,6 +940,12 @@ public:
 				params[i].error = 0;
 			}
 
+			//set random
+			int ind = rand() % train_size;
+			for (int i = 0; i < size; i++) {
+				indice[i] = indice_root[(ind + i) % train_size];
+			}
+
 			//release sem
 			for (int i = 0; i < tc; i++) {
 				__NANOC_THREAD_MUTEX_UNLOCK__(params[i].mutex);
@@ -961,7 +985,7 @@ public:
 			}
 			output.updateBiasWithBiasSum(size);
 
-			printf("[ %d]Error is: %e\r", count, error);
+			printf("[ %d]Error is: %e\n", count, error);
 			count++;
 			if (error < threshold) {
 				printf("\n");

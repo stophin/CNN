@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <conio.h>
+#include <time.h>
 
 #include <math.h>
 

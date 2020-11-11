@@ -1009,7 +1009,10 @@ public:
 		}
 		//end thread
 		for (int i = 0; i < tc; i++) {
-			__NANOC_THREAD_END__(params[i].thread);
+			//__NANOC_THREAD_END__(params[i].thread);
+			__NANOC_THREAD_CLOSE__(params[i].thread);
+			__NANOC_THREAD_CLOSE__(params[i].mutex);
+			__NANOC_THREAD_CLOSE__(params[i].main_mutex);
 		}
 
 		//unalloc delta sum

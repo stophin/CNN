@@ -50,6 +50,7 @@ typedef HANDLE HANDLE_MUTEX;
 #define __NANOC_THREAD_BEGIN__(hHandle, pFuncName, pParam) hHandle = (HANDLE)_beginthreadex(NULL, 0, &pFuncName, pParam, 0, 0)
 #define __NANOC_THREAD_WAIT__(hHandle) WaitForSingleObject(hHandle, 1000)
 #define __NANOC_THREAD_END__(hHandle) TerminateThread(hHandle, 0)
+#define __NANOC_THREAD_CLOSE__(hHandle) ::CloseHandle(hHandle)
 
 #ifndef _THREAD_SEM_
 #define __NANOC_THREAD_MUTEX_INIT__(hMutex, obj) obj->hMutex = CreateMutex(NULL, FALSE, NULL)
@@ -149,6 +150,7 @@ typedef pthread_t HANDLE;
 #define __NANOC_THREAD_BEGIN__(hHandle, pFuncName, pParam) pthread_create(&hHandle, NULL, pFuncName, pParam)
 #define __NANOC_THREAD_WAIT__(hHandle) pthread_cancel(hHandle)
 #define __NANOC_THREAD_END__(hHandle) pthread_kill(hHandle, 0)
+#define __NANOC_THREAD_CLOSE__(hHandle) 
 
 #ifndef _THREAD_SEM_
 typedef pthread_mutex_t HANDLE_MUTEX;

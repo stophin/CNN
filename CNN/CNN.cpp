@@ -1093,14 +1093,15 @@ int test_sample() {
 		count++;
 
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
-		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
+		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
+		nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
 
 		//if (kbhit())
 		{
 			printf("Training: %d\n", count);
 			nets.Traverse();
+			INT ind = 0;
 			while (1) {
-				INT ind;
 				while (scanf("%d", &ind) != 1) {
 					getchar();
 					fflush(stdin);
@@ -1147,6 +1148,9 @@ int test_sample() {
 				}
 				printf("%d %d\n", result, predict);
 				printf("total error: %lf\n", e);
+			}
+			if (ind < 0) {
+				break;
 			}
 		}
 	}

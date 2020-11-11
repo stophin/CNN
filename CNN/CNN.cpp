@@ -1093,8 +1093,8 @@ int test_sample() {
 		count++;
 
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
-		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
-		nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
+		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
+		//nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
 
 		//if (kbhit())
 		{

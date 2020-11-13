@@ -6,6 +6,11 @@
 
 #include "Layer.h"
 
+#ifdef _CNN_SHOW_GUI_
+extern const int show_width;
+extern const int show_height;
+#endif
+
 struct ThreadParam{
 	int tid;
 	int size;
@@ -382,8 +387,9 @@ public:
 			}
 			//printf("tid:%d\n", tid);
 			for (int iter = start; iter < end; iter++) {
-				input.setNeural((double*)((double*)X + iter * in_size), in_size, tid);
-				output.setNeural((double*)((double*)Y + iter * out_size), out_size, tid);
+				int ind = param->indice[iter];
+				input.setNeural((double*)((double*)X + ind * in_size), in_size, tid);
+				output.setNeural((double*)((double*)Y + ind * out_size), out_size, tid);
 
 				input.setScale(1.0 / divrange, tid);
 				output.setScale(1.0 / divoutrange, tid);
@@ -430,7 +436,7 @@ public:
 		__NANOC_THREAD_FUNC_END__(0);
 	}
 
-	void Train(double **X, double **Y, int size, int in_size, int out_size, double threshold, int thx, int thy) {
+	void Train(double **X, double **Y, int size, int in_size, int out_size, double threshold, int thx, int thy, int sample_size = 0, int train_count = 0) {
 		int tc = thx * thy;
 		EFTYPE error;
 		Layer * layer;
@@ -469,8 +475,15 @@ public:
 		}
 		output.resetDelta(tc, 1);
 
+		//adjust parameter
+		if (sample_size <= 0) {
+			sample_size = size;
+		}
+
 		//init thread
 		ThreadParam * params = new ThreadParam[tc];
+		int *indice = new int[size];
+		int *indice_root = new int[sample_size];
 		int div = size / tc;
 		int divl = size - div * tc;
 		int divd = 0;
@@ -479,6 +492,7 @@ public:
 			params[i].size = size;
 			params[i].in_size = in_size;
 			params[i].out_size = out_size;
+			params[i].indice = indice;
 			params[i].X = X;
 			params[i].Y = Y;
 			params[i].tc = tc;
@@ -499,8 +513,34 @@ public:
 		}
 		//getch();
 
+
+		//randomize
+		srand(time(NULL));
+		for (int i = 0; i < sample_size; i++) {
+			indice_root[i] = i;
+		}
+		for (int i = sample_size - 1; i > 0; i--) {
+			int ind = rand() % i;
+			int t = indice_root[i];
+			indice_root[i] = indice_root[ind];
+			indice_root[ind] = t;
+		}
+
 		int count = 0;
+		int count_div = sample_size / size;
+		if (train_count > 0) {
+			count_div = train_count;
+		}
+#ifdef _CNN_SHOW_GUI_
+		EFTYPE *show_error = new EFTYPE[count_div];
+		EFTYPE max_error = 0;
+#endif
+		printf("%d %d %d\n", sample_size, size, count_div);
 		while (true) {
+			//endless loop when count_div is 1, say sample_size equals size
+			if (count_div > 1 && count >= count_div) {
+				break;
+			}
 			//initialze alloced delta sum
 			input.resetDeltaSum(tc, 0);
 			layer = hiddens.link;
@@ -576,6 +616,12 @@ public:
 				params[i].error = 0;
 			}
 
+			//randomise indice
+			int ind = rand() % sample_size;
+			for (int i = 0; i < size; i++) {
+				indice[i] = indice_root[(ind + i) % sample_size];
+			}
+
 			//release sem
 			for (int i = 0; i < tc; i++) {
 				__NANOC_THREAD_MUTEX_UNLOCK__(params[i].mutex);
@@ -615,6 +661,24 @@ public:
 			}
 			output.updateBiasWithBiasSum(size);
 
+#ifdef _CNN_SHOW_GUI_
+			if (count < count_div) {
+				show_error[count] = error;
+				if (max_error < error) {
+					max_error = error;
+				}
+				if (count > 1) {
+					EP_ClearDevice();
+					EFTYPE width_r = (EFTYPE)count / show_width;
+					EFTYPE height_r = (EFTYPE)max_error / show_height;
+					for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i ++) {
+						EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
+					}
+					EP_RenderFlush();
+				}
+			}
+#endif
+
 			printf("[ %d]Error is: %e\r", count, error);
 			count++;
 			if (error < threshold) {
@@ -622,6 +686,11 @@ public:
 				break;
 			}
 		}
+		delete[] indice_root;
+		delete[] indice;
+#ifdef _CNN_SHOW_GUI_
+		delete[] show_error;
+#endif
 		//release sem
 		for (int i = 0; i < tc; i++) {
 			//send end singal
@@ -864,6 +933,7 @@ public:
 
 		int count = 0;
 		int count_div = train_size / size;
+		printf("%d %d %d\n", train_size, size, count_div);
 		while (count < count_div) {
 			//initialze alloced delta sum
 			input.resetDeltaSum(tc, 0);

@@ -4,6 +4,11 @@
 
 #include "NN/Network.h"
 
+#ifdef _CNN_SHOW_GUI_
+const int show_width = 300;
+const int show_height = 200;
+#endif
+
 const int classes_count = 10;
 const int width = 32;
 const int height = 32;
@@ -765,7 +770,7 @@ int test1() {
 
 	nets.Traverse();
 
-	getch();
+	//getch();
 
 	//test input
 	Layer input;
@@ -803,7 +808,7 @@ int test1() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy); 
 
-		/*
+	/*
 	EFTYPE X[][2] = {
 		{0.356649128, 0.030306376},
 		{0.105260929, 0.876207066},
@@ -864,7 +869,7 @@ int test1() {
 		count++;
 
 		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01);
-		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01, 3, 10);
+		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 1e-5, 3, 10, sample_size_real, 5000);
 		sample_size++;
 		if (sample_size > 4) {
 			sample_size = 4;
@@ -874,6 +879,33 @@ int test1() {
 		{
 			printf("Training: %d\n", count);
 			nets.Traverse();
+
+#ifdef _CNN_SHOW_GUI_
+			EFTYPE width_r = (EFTYPE)sample_size_real / show_width;
+			EFTYPE height_r = (EFTYPE)divy / show_height;
+			//EP_ClearDevice();
+			int x, y, ex = 0, ey = 0, ex1 = 0, ey1 = 0;
+			for (int i = 1; i < sample_size_real; i++) {
+				input.setNeural(X[i], in_size);
+				nets.Forecast(input, &output);
+				x = i / width_r;
+				y = Y[i][0] / height_r;
+				if (x <= show_width && y <= show_height) {
+					EP_SetColor(GREEN);
+					EP_Line(x, y, ex, ey);
+					ex = x;
+					ey = y;
+				}
+				y = output.neurals.link->output * divy / height_r;
+				if (x <= show_width && y <= show_height) {
+					EP_SetColor(RED);
+					EP_Line(x, y, ex1, ey1);
+					ex1 = x;
+					ey1 = y;
+				}
+			}
+			EP_RenderFlush();
+#endif
 			while (1) {
 				INT ind;
 				while (scanf("%d", &ind) != 1) {
@@ -1176,8 +1208,11 @@ int test_sample() {
 }
 int main(int argc, _TCHAR* argv[])
 {
+#ifdef _CNN_SHOW_GUI_
+	EP_Init(show_width, show_height);
+#endif
 	while (1) {
-		//test1();
-		test_sample();
+		test1();
+		//test_sample();
 	}
 }

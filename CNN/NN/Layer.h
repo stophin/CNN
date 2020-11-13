@@ -6,7 +6,6 @@
 
 #include "Neural.h"
 
-
 typedef class Layer Layer;
 class Layer {
 public:
@@ -1381,9 +1380,7 @@ public:
 				}
 				else {
 					for (int i = 0; i < tc; i++) {
-						for (int j = neural->map_w * neural->map_h; j >= 0; j--) {
-							neural->map.db += neural->_map[i].db;
-						}
+						neural->map.db += neural->_map[i].db;
 					}
 				}
 
@@ -1402,9 +1399,7 @@ public:
 					}
 				}else {
 					for (int i = 0; i < tc; i++) {
-						for (int j = neural->map_w * neural->map_h; j >= 0; j--) {
-							neural->map.db += neural->_map[i].db;
-						}
+						neural->map.db += neural->_map[i].db;
 					}
 				}
 

@@ -51,6 +51,12 @@
     <ClInclude Include="NN\mt19937ar.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="platform\EPaint.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\EPoint.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CNN.cpp">
@@ -60,6 +66,12 @@
       <Filter>头文件\common</Filter>
     </ClCompile>
     <ClCompile Include="NN\mt19937ar.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\EPoint.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\EPaint.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

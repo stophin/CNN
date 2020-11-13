@@ -74,8 +74,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>H:\Neural\thirdparty\opencv4\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>H:\Neural\thirdparty\opencv4\lib\Debug;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+    <IncludePath>F:\xege.git\src\;H:\Neural\thirdparty\opencv4\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>F:\xege.git\lib\vs2017\x64;H:\Neural\thirdparty\opencv4\lib\Debug;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -110,12 +110,12 @@
       <SDLCheck>true</SDLCheck>
       <FloatingPointModel>Strict</FloatingPointModel>
       <FloatingPointExceptions>true</FloatingPointExceptions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -164,11 +164,15 @@
     <ClInclude Include="NN\Neural.h" />
     <ClInclude Include="NN\Convolute.h" />
     <ClInclude Include="platform\ELibrary.h" />
+    <ClInclude Include="platform\EPaint.h" />
+    <ClInclude Include="platform\EPoint.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CNN.cpp" />
     <ClCompile Include="common\MultiLinkList.cpp" />
     <ClCompile Include="NN\mt19937ar.cpp" />
+    <ClCompile Include="platform\EPaint.cpp" />
+    <ClCompile Include="platform\EPoint.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

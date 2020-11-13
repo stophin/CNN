@@ -864,20 +864,20 @@ int test1() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy);*/
 
+	clock_t start, end;
 	int count = 0;
 	while (1) {
 		count++;
 
+		start = clock();
 		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01);
 		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 1e-5, 3, 10, sample_size_real, 5000);
-		sample_size++;
-		if (sample_size > 4) {
-			sample_size = 4;
-		}
+		end = clock();
+		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
 
 		//if (kbhit())
 		{
-			printf("Training: %d\n", count);
+			printf("\nTraining: %d\n", count);
 			nets.Traverse();
 
 #ifdef _CNN_SHOW_GUI_
@@ -1120,17 +1120,21 @@ int test_sample() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy);
 
+	clock_t start, end;
 	int count = 0;
 	while (1) {
 		count++;
 
+		start = clock();
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
 		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
 		//nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
+		end = clock();
+		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
 
 		//if (kbhit())
 		{
-			printf("Training: %d\n", count);
+			printf("\nTraining: %d\n", count);
 			nets.Traverse();
 			INT ind = 0;
 			while (1) {

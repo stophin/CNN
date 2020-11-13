@@ -1216,7 +1216,7 @@ int main(int argc, _TCHAR* argv[])
 	EP_Init(show_width, show_height);
 #endif
 	while (1) {
-		test1();
-		//test_sample();
+		//test1();
+		test_sample();
 	}
 }

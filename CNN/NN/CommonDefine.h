@@ -21,8 +21,8 @@
 #define WEIGHT	((2.0*(double)rand()/RAND_MAX) - 1)//(((EFTYPE)(rand() % 10))/100.0)//初始化权值为0，也可以初始化随机值 
 #define BIAS	((2.0*(double)rand()/RAND_MAX) - 1)//0.1//初始化阀值为0，也可以初始化随机值
 
-#define ETA_W    0.95   //权值调整率 adjustWeight
-//#define ETA_W    0.03   //权值调整率 adjustWeight
+//#define ETA_W    0.95   //权值调整率 adjustWeight
+#define ETA_W    0.03   //权值调整率 adjustWeight
 #define ETA_B    0.01    //阀值调整率 adjustBias
 
 #define T_ERROR	0.075		//单个样本允许的误差

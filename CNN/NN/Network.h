@@ -933,6 +933,10 @@ public:
 
 		int count = 0;
 		int count_div = train_size / size;
+#ifdef _CNN_SHOW_GUI_
+		EFTYPE *show_error = new EFTYPE[count_div];
+		EFTYPE max_error = 0;
+#endif
 		printf("%d %d %d\n", train_size, size, count_div);
 		while (count < count_div) {
 			//initialze alloced delta sum
@@ -1055,6 +1059,24 @@ public:
 			}
 			output.updateBiasWithBiasSum(size);
 
+#ifdef _CNN_SHOW_GUI_
+			if (count < count_div) {
+				show_error[count] = error;
+				if (max_error < error) {
+					max_error = error;
+				}
+				if (count > 1) {
+					EP_ClearDevice();
+					EFTYPE width_r = (EFTYPE)count / show_width;
+					EFTYPE height_r = (EFTYPE)max_error / show_height;
+					for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
+						EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
+					}
+					EP_RenderFlush();
+				}
+			}
+#endif
+
 			printf("[ %d]Error is: %e\n", count, error);
 			count++;
 			if (error < threshold) {
@@ -1062,6 +1084,9 @@ public:
 				break;
 			}
 		}
+#ifdef _CNN_SHOW_GUI_
+		delete[] show_error;
+#endif
 		//release sem
 		for (int i = 0; i < tc; i++) {
 			//send end singal

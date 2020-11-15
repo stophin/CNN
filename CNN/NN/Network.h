@@ -6,7 +6,7 @@
 
 #include "Layer.h"
 
-#ifdef _CNN_SHOW_GUI_
+#ifdef _CNN_SHOW_LOSS_
 extern const int show_width;
 extern const int show_height;
 #endif
@@ -531,7 +531,7 @@ public:
 		if (train_count > 0) {
 			count_div = train_count;
 		}
-#ifdef _CNN_SHOW_GUI_
+#ifdef _CNN_SHOW_LOSS_
 		EFTYPE *show_error = new EFTYPE[count_div];
 		EFTYPE max_error = 0;
 #endif
@@ -661,7 +661,7 @@ public:
 			}
 			output.updateBiasWithBiasSum(size);
 
-#ifdef _CNN_SHOW_GUI_
+#ifdef _CNN_SHOW_LOSS_
 			if (count < count_div) {
 				show_error[count] = error;
 				if (max_error < error) {
@@ -671,6 +671,8 @@ public:
 					EP_ClearDevice();
 					EFTYPE width_r = (EFTYPE)count / show_width;
 					EFTYPE height_r = (EFTYPE)max_error / show_height;
+					EP_SetColor(WHITE);
+					ege::setlinewidth(1);
 					for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i ++) {
 						EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
 					}
@@ -688,7 +690,7 @@ public:
 		}
 		delete[] indice_root;
 		delete[] indice;
-#ifdef _CNN_SHOW_GUI_
+#ifdef _CNN_SHOW_LOSS_
 		delete[] show_error;
 #endif
 		//release sem
@@ -708,7 +710,10 @@ public:
 		}
 		//end thread
 		for (int i = 0; i < tc; i++) {
-			__NANOC_THREAD_END__(params[i].thread);
+			//__NANOC_THREAD_END__(params[i].thread);
+			__NANOC_THREAD_CLOSE__(params[i].thread);
+			__NANOC_THREAD_CLOSE__(params[i].mutex);
+			__NANOC_THREAD_CLOSE__(params[i].main_mutex);
 		}
 
 		//unalloc delta sum
@@ -837,7 +842,7 @@ public:
 		__NANOC_THREAD_FUNC_END__(0);
 	}
 
-	void TrainCNN(Sample *sample, int size, int train_size, int in_size, int out_size, double threshold, int thx, int thy) {
+	void TrainCNN(Sample *sample, int size, int train_size, int in_size, int out_size, double threshold, int thx, int thy, int train_count = 0) {
 		int tc = thx * thy;
 		EFTYPE error;
 		Layer * layer;
@@ -933,11 +938,17 @@ public:
 
 		int count = 0;
 		int count_div = train_size / size;
-#ifdef _CNN_SHOW_GUI_
+		if (train_count > 0) {
+			count_div = train_count;
+		}
+#ifdef _CNN_SHOW_LOSS_
 		EFTYPE *show_error = new EFTYPE[count_div];
 		EFTYPE max_error = 0;
 #endif
 		printf("%d %d %d\n", train_size, size, count_div);
+#ifdef _CNN_SHOW_CONV_
+		char c = 0;
+#endif
 		while (count < count_div) {
 			//initialze alloced delta sum
 			input.resetDeltaSum(tc, 0);
@@ -1059,7 +1070,75 @@ public:
 			}
 			output.updateBiasWithBiasSum(size);
 
-#ifdef _CNN_SHOW_GUI_
+#ifdef _CNN_SHOW_CONV_
+			double scale_max = 1.0;
+			double scale_min = -1.0;
+			int l = 0;
+			int n = 0;
+			for (int t = 0; t < tc; t++) {
+				if (c == 'c' || c == 'q') {
+					break;
+				}
+				layer = this->layers.link;
+				if (layer) {
+					do {
+						l++;
+						n = 0;
+						Neural *neural = layer->neurals.link;
+						if (neural) {
+							do {
+								n++;
+								EP_ClearDevice();
+								EFTYPE width_r = (EFTYPE)neural->map_w / show_width;
+								EFTYPE height_r = (EFTYPE)neural->map_h / show_height;
+								for (int i = 0; i < show_width; i++) {
+									for (int j = 0; j < show_height; j++) {
+										int ind = (int)((INT)(j * height_r)* neural->map_h + (INT)(i * width_r));
+										double v = 0;
+										if (ind < neural->map_w * neural->map_h) {
+											v = neural->_map[t].data[ind];
+										}
+										ECOLOR color = (ECOLOR)(((v - scale_min) / (scale_max - scale_min)) * 255.0);
+										EP_SetPixel(i, j, color);
+									}
+								}
+								EP_RenderFlush();
+
+								printf("tid: %d/%d, layer: %d/%d, neural: %d/%d\n", t + 1, tc, l, this->layers.linkcount, n, layer->neurals.linkcount);
+								if (!(c == 'q' || c == 'Q')) {
+									c = getchar();
+								}
+								if (c == 'c' || c == 'q') {
+									break;
+								}
+								if (c == 't' || c == 'T') {
+									break;
+								}
+								if (c == 'q' || c == 'Q') {
+									break;
+								}
+
+								neural = layer->neurals.next(neural);
+							} while (neural && neural != layer->neurals.link);
+						}
+
+						if (c == 't' || c == 'T') {
+							break;
+						}
+						if (c == 'q' || c == 'Q') {
+							break;
+						}
+
+						layer = this->layers.next(layer);
+					} while (layer && layer != this->layers.link);
+				}
+				if (c == 'q' || c == 'Q') {
+					break;
+				}
+			}
+#endif
+
+#ifdef _CNN_SHOW_LOSS_
 			if (count < count_div) {
 				show_error[count] = error;
 				if (max_error < error) {
@@ -1069,6 +1148,8 @@ public:
 					EP_ClearDevice();
 					EFTYPE width_r = (EFTYPE)count / show_width;
 					EFTYPE height_r = (EFTYPE)max_error / show_height;
+					EP_SetColor(WHITE);
+					ege::setlinewidth(1);
 					for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
 						EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
 					}
@@ -1084,7 +1165,7 @@ public:
 				break;
 			}
 		}
-#ifdef _CNN_SHOW_GUI_
+#ifdef _CNN_SHOW_LOSS_
 		delete[] show_error;
 #endif
 		//release sem

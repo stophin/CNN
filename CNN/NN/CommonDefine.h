@@ -5,14 +5,18 @@
 #define _COMMON_DEFINE_H_
 
 #define _CNN_SHOW_GUI_
+
+#ifdef _CNN_SHOW_GUI_
 #define _CNN_SHOW_LOSS_
+#define _CNN_SHOW_CONV_
+#endif
 
 #include "../common/MultiLinkList.h"
 
 #include "../NN/mt19937ar.h"
 
 //Define Maxium Hidden Layer
-#define MAX_HIDDEN_LAYER		5
+#define MAX_HIDDEN_LAYER		10
 
 //Define Maxium Simulation Range
 #define MAX_SIMULATION_RANGE_INPUT	1.0

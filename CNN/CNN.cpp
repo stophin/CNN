@@ -1,7 +1,6 @@
 // CNN.cpp : 定义控制台应用程序的入口点。
 //
 
-
 #include "NN/Network.h"
 
 #ifdef _CNN_SHOW_GUI_
@@ -949,7 +948,90 @@ int test1() {
 		}
 	}
 	return 0;
+} 
+
+VOID onKeyDown(WPARAM wParam)
+{
 }
+EPointF drag;
+VOID onDrag(FLOAT x, FLOAT y, INT mode)
+{
+	if (mode == 1) // mouse down
+	{
+		drag.X = x;
+		drag.Y = y;
+	}
+	else if (mode == 2) // mouse move
+	{
+		if (EP_NTZERO(drag.X) && EP_NTZERO(drag.Y))
+		{
+			EP_SetColor(BLUE);
+			ege::setlinewidth(20);
+			EP_Line(x, y, drag.X, drag.Y);
+			drag.X = x;
+			drag.Y = y;
+		}
+	}
+	else	// mouse up
+	{
+		drag.X = 0;
+		drag.Y = 0;
+	}
+}
+#ifdef _CNN_SHOW_GUI_
+__NANOC_THREAD_FUNC_BEGIN__(GUIThread) {
+	ThreadParam *param = (ThreadParam*)pv;
+	HANDLE_MUTEX &mutex = param->mutex;
+	HANDLE_MUTEX &main_mutex = param->main_mutex;
+	int tid = param->tid;
+	int pull = 0;
+	while (true) {
+		tid = param->tid;
+		if (tid < 0) {
+			__NANOC_THREAD_MUTEX_UNLOCK__(main_mutex);
+			break;
+		}
+		if (tid > 0) {
+			while (EP_MouseHit())
+			{
+				EP_MouseMsg msg = EP_GetMouseMsg();
+				if (EP_IsLeft(msg)) {
+					if (pull > 0) {
+						pull = 0;
+						EP_ClearDevice();
+						param->tid = 2;
+					}
+					if (EP_IsDown(msg))
+					{
+						onDrag(msg.x, msg.y, 1);
+					}
+					else if (EP_IsUp(msg))
+					{
+						onDrag(msg.x, msg.y, 0);
+					}
+				}
+				if (EP_IsMove(msg))
+				{
+					onDrag(msg.x, msg.y, 2);
+				}
+			}
+			if (EP_KBMsg()) {
+				EP_MSG msg = EP_GetKBMsg();
+				if (EP_KBIsDown(msg)) {
+					onKeyDown(EP_GetKey(msg));
+				}
+			}
+			EP_RenderFlush();
+		}
+		else {
+			pull = 1;
+			::Sleep(100);
+		}
+	}
+
+	__NANOC_THREAD_FUNC_END__(0);
+}
+#endif
 int test_sample() {
 
 	// 训练数据
@@ -1120,6 +1202,14 @@ int test_sample() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy);
 
+#ifdef _CNN_SHOW_GUI_
+	ThreadParam param;
+	param.tid = 0;
+	__NANOC_THREAD_MUTEX_INIT__(main_mutex, (&param));
+	__NANOC_THREAD_MUTEX_LOCK__(param.main_mutex);
+	__NANOC_THREAD_BEGIN__(param.thread, GUIThread, &param);
+	EFTYPE *draw = new EFTYPE[width * height];
+#endif
 	clock_t start, end;
 	int count = 0;
 	while (1) {
@@ -1127,7 +1217,7 @@ int test_sample() {
 
 		start = clock();
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
-		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10);
+		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10, 0);
 		//nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
 		end = clock();
 		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
@@ -1138,19 +1228,134 @@ int test_sample() {
 			nets.Traverse();
 			INT ind = 0;
 			while (1) {
+#ifdef _CNN_SHOW_GUI_
+				param.tid = 1;
+#endif
 				while (scanf("%d", &ind) != 1) {
 					getchar();
 					fflush(stdin);
 				}
+#ifdef _CNN_SHOW_GUI_
+				double scale_max = 1.0;
+				double scale_min = -1.0;
+				int is_input = 0;
+				if (param.tid == 2) {
+					is_input = 1;
+				}
+				param.tid = 0;
+
+				if (is_input) {
+					printf("input: %d\n", ind);
+
+					EFTYPE width_r = (EFTYPE)width / show_width;
+					EFTYPE height_r = (EFTYPE)height / show_height;
+					for (int i = 0; i < width; i++) {
+						for (int j = 0; j < height; j++) {
+							int ind = i * width + j;
+							int x = (int)(j / width_r);
+							int y = (int)(i / height_r);
+							ECOLOR color = EP_GetPixel(x, y);
+							draw[ind] = ((double)color / 255.0) * (scale_max - scale_min) + scale_min;
+						}
+					}
+					nets.input.setNeuralMatrix(draw, in_size);
+					for (int i = 0; i < out_size; i++) {
+						ECOLOR temp = 0;
+						if (i == ind) {
+							draw[i] = 0.8;
+						}
+						else {
+							draw[i] = -0.8;
+						}
+					}
+					nets.output.setNeural(draw, out_size);
+				}
+				else {
+					if (ind < 0 || ind >= sample_size_real) {
+						break;
+					}
+
+					nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+					nets.output.setNeural(test_sample[ind].label, out_size);
+				}
+#else
 				if (ind < 0 || ind >= sample_size_real) {
 					break;
 				}
 
 				nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
 				nets.output.setNeural(test_sample[ind].label, out_size);
+#endif
 				//nets.input.setNeuralMatrix(train_sample[ind].data, in_size);
 				//nets.output.setNeural(train_sample[ind].label, out_size);
 				nets.Forecast(input, &output);
+
+#ifdef _CNN_SHOW_CONV_
+				char c = 0;
+				Layer * layer;
+				int tc = 1;
+				int l = 0;
+				int n = 0;
+				for (int t = 0; t < tc; t++) {
+					layer = nets.layers.link;
+					if (layer) {
+						do {
+							l++;
+							n = 0;
+							Neural *neural = layer->neurals.link;
+							if (neural) {
+								do {
+									n++;
+									EP_ClearDevice();
+									EFTYPE width_r = (EFTYPE)neural->map_w / show_width;
+									EFTYPE height_r = (EFTYPE)neural->map_h / show_height;
+									for (int i = 0; i < show_width; i++) {
+										for (int j = 0; j < show_height; j++) {
+											int ind = (int)((INT)(j * height_r)* neural->map_h + (INT)(i * width_r));
+											double v = 0;
+											if (ind < neural->map_w * neural->map_h) {
+												v = neural->map.data[ind];
+											}
+											ECOLOR color = (ECOLOR)(((v - scale_min) / (scale_max - scale_min)) * 255.0);
+											EP_SetPixel(i, j, color);
+										}
+									}
+									EP_RenderFlush();
+
+									printf("tid: %d/%d, layer: %d/%d, neural: %d/%d\n", t + 1, tc, l, nets.layers.linkcount, n, layer->neurals.linkcount);
+									if (!(c == 'q' || c == 'Q')) {
+										c = getchar();
+									}
+									if (c == 'c' || c == 'q') {
+										break;
+									}
+									if (c == 't' || c == 'T') {
+										break;
+									}
+									if (c == 'q' || c == 'Q') {
+										break;
+									}
+
+									neural = layer->neurals.next(neural);
+								} while (neural && neural != layer->neurals.link);
+							}
+
+							if (c == 't' || c == 'T') {
+								break;
+							}
+							if (c == 'q' || c == 'Q') {
+								break;
+							}
+
+							layer = nets.layers.next(layer);
+						} while (layer && layer != nets.layers.link);
+					}
+					if (c == 'q' || c == 'Q') {
+						break;
+					}
+				}
+#endif
+
 				printf("\n");
 				/*
 				for (i = 0; i < in_size; i++) {
@@ -1160,29 +1365,46 @@ int test_sample() {
 				printf("Actual:\n");
 
 				Neural * neural = nets.output.neurals.link;
+				EFTYPE result_softmax = 0;
+				EFTYPE predict_softmax = 0;
+				if (neural) {
+					do {
+						result_softmax += exp(neural->map.label[0]);
+						predict_softmax += exp(neural->map.data[0]);
+
+						neural = nets.output.neurals.next(neural);
+					} while (neural && neural != nets.output.neurals.link);
+				}
 				EFTYPE e = 0;
 				int result = -1;
 				int predict = -1;
+				EFTYPE softmax;
+				EFTYPE result_softmax_max = 0;
+				EFTYPE predict_softmax_max = 0;
 				i = 0;
 				if (neural) {
 					do {
 						printf("%e %e", neural->map.label[0], neural->map.data[0]);
 						EFTYPE f = neural->map.label[0] - neural->map.data[0];
-						f = f * f / (2 * divy);
+						f = f * f / (divy * divy);
 						e += f;
 						printf(" error: %lf\n", f);
-						i++;
-						if (neural->map.label[0] > 0) {
+						softmax = exp(neural->map.label[0]) / result_softmax;
+						if (softmax > result_softmax_max) {
+							result_softmax_max = softmax;
 							result = i;
 						}
-						if (neural->map.data[0] > 0) {
+						softmax = exp(neural->map.data[0]) / result_softmax;
+						if (softmax > predict_softmax_max) {
+							predict_softmax_max = softmax;
 							predict = i;
 						}
+						i++;
 
 						neural = nets.output.neurals.next(neural);
 					} while (neural && neural != nets.output.neurals.link);
 				}
-				printf("%d %d\n", result, predict);
+				printf("result: %d  predict: %d\n", result, predict);
 				printf("total error: %lf\n", e);
 			}
 			if (ind < 0) {
@@ -1190,6 +1412,14 @@ int test_sample() {
 			}
 		}
 	}
+#ifdef _CNN_SHOW_GUI_
+	//release sem
+	//send end singal
+	param.tid = -1;
+	__NANOC_THREAD_MUTEX_LOCK__(param.main_mutex);
+	__NANOC_THREAD_CLOSE__(param.thread, GUIThread, &param);
+	delete[] draw;
+#endif
 	// 释放资源
 	for (int i = 0; i < train_sample_count; i++)
 	{

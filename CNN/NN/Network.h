@@ -57,6 +57,18 @@ public:
 		layers.~MultiLinkList();
 	}
 
+	void setLearningRate(EFTYPE r) {
+		Layer * layer = this->layers.link;
+		if (layer) {
+			do {
+
+				layer->learning_rate = r;
+
+				layer = this->layers.next(layer);
+			} while (layer && layer != this->layers.link);
+		}
+	}
+
 	EFTYPE divrange;
 	EFTYPE divoutrange;
 

@@ -25,6 +25,8 @@ public:
 
 	LayerMode mode;
 
+	EFTYPE learning_rate;
+
 	void *nets;
 
 	void addNeural(EFTYPE value) {
@@ -726,12 +728,12 @@ public:
 							Neural * _neural = conn->forw;
 							if (_neural) {
 								if (mode == LayerMode::Normal) {
-									conn->weight -= ETA_W * conn->deltaSum / size;//TODO
+									conn->weight -= learning_rate * conn->deltaSum / size;//TODO
 								}
 								else {
 									k_size = conn->kernel_w * conn->kernel_h;
 									for (int i = 0; i < k_size; i++) {
-										conn->kernel.W[i] = gradient_descent(conn->kernel.W[i], conn->kernel.dW[i] / size, ETA_W, lambda);
+										conn->kernel.W[i] = gradient_descent(conn->kernel.W[i], conn->kernel.dW[i] / size, learning_rate, lambda);
 									}
 								}
 							}
@@ -741,10 +743,10 @@ public:
 					} while (conn && conn != neural->conn.link);
 				}
 				if (mode == LayerMode::Normal) {
-					neural->bias -= ETA_W * neural->biasSum / size;
+					neural->bias -= learning_rate * neural->biasSum / size;
 				}
 				else {
-					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, ETA_W, lambda);
+					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, learning_rate, lambda);
 				}
 
 				neural = this->neurals.next(neural);
@@ -759,10 +761,10 @@ public:
 				double lambda = 0.0;
 
 				if (mode == LayerMode::Normal) {
-					neural->bias -= ETA_W * neural->biasSum / size;
+					neural->bias -= learning_rate * neural->biasSum / size;
 				}
 				else {
-					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, ETA_W, lambda);
+					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, learning_rate, lambda);
 				}
 
 				neural = this->neurals.next(neural);
@@ -1693,7 +1695,7 @@ public:
 							if (_neural) {
 								//formula:
 								//w[ij] = w[ij] - lamda1 * delta[ij] * x[i]
-								conn->weight += ETA_W * _neural->delta * neural->output;// *eva_fun_1(_neural->output);//_neural->delta * neural->output;
+								conn->weight += learning_rate * _neural->delta * neural->output;// *eva_fun_1(_neural->output);//_neural->delta * neural->output;
 							}
 							c++;
 						}

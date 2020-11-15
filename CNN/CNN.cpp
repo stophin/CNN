@@ -868,6 +868,8 @@ int test1() {
 	while (1) {
 		count++;
 
+		nets.setLearningRate(0.95);
+
 		start = clock();
 		//nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 0.01);
 		nets.Train((double**)X, (double**)Y, sample_size, in_size, out_size, 1e-5, 3, 10, sample_size_real, 5000);
@@ -1214,6 +1216,8 @@ int test_sample() {
 	int count = 0;
 	while (1) {
 		count++;
+
+		nets.setLearningRate(0.03);
 
 		start = clock();
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);

@@ -118,6 +118,25 @@ typedef HANDLE HANDLE_MUTEX;
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include <malloc.h>
+
+#define CLK_TCK _SC_CLK_TCK
+typedef unsigned int * WPARAM;
+typedef float FLOAT;
+
+
+struct EPointF {
+	FLOAT X;
+	FLOAT Y;
+};
+
+struct ERectF {
+	FLOAT X;
+	FLOAT Y;
+	FLOAT Width;
+	FLOAT Height;
+};
+
 #include <math.h>
 
 void changemode(int dir)

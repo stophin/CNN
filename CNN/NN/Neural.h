@@ -217,6 +217,10 @@ public:
 		}
 		this->_map = NULL;
 		this->_map_common = NULL;
+		this->_biasSum = NULL;
+		this->_delta = NULL;
+		this->_output = NULL;
+		this->_value = NULL;
 	}
 
 	void uninit_cnn_neural() {
@@ -298,6 +302,7 @@ public:
 			memset(connector->kernel.dW, 0, mem_size);
 		}
 		connector->_kernel = NULL;
+		connector->_deltaSum = NULL;
 	}
 
 

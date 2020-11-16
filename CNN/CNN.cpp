@@ -952,6 +952,7 @@ int test1() {
 	return 0;
 } 
 
+#ifdef _CNN_SHOW_GUI_
 VOID onKeyDown(WPARAM wParam)
 {
 }
@@ -980,7 +981,6 @@ VOID onDrag(FLOAT x, FLOAT y, INT mode)
 		drag.Y = 0;
 	}
 }
-#ifdef _CNN_SHOW_GUI_
 __NANOC_THREAD_FUNC_BEGIN__(GUIThread) {
 	ThreadParam *param = (ThreadParam*)pv;
 	HANDLE_MUTEX &mutex = param->mutex;

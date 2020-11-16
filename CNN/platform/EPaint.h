@@ -11,6 +11,7 @@
 #include "./EPoint.h"
 #include "ELibrary.h"
 
+#ifdef _NANOC_WINDOWS_
 #define DEF_FTCOLOR	BLACK
 #define DEF_FFCOLOR	WHITE
 #define DEF_FLCOLOR	LIGHTGRAY
@@ -65,5 +66,6 @@ int EP_GetImageHeight(EIMAGE image);
 
 void EP_Text(EPTYPE x,EPTYPE y,EPCHAR * c);
 int EP_GetTextWidth(EPCHAR& c);
+#endif
 #endif //end of _EPAINT_H_
 //end of file

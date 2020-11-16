@@ -4,14 +4,17 @@
 #ifndef _COMMON_DEFINE_H_
 #define _COMMON_DEFINE_H_
 
+
+#include "../common/MultiLinkList.h"
+
+#ifdef _NANOC_WINDOWS_
 #define _CNN_SHOW_GUI_
+#endif
 
 #ifdef _CNN_SHOW_GUI_
 #define _CNN_SHOW_LOSS_
 #define _CNN_SHOW_CONV_
 #endif
-
-#include "../common/MultiLinkList.h"
 
 #include "../NN/mt19937ar.h"
 

@@ -9,6 +9,7 @@
 
 #ifdef _NANOC_WINDOWS_
 #define _CNN_SHOW_GUI_
+#define _CNN_SHOW_CURV_
 #endif
 
 #ifdef _CNN_SHOW_GUI_

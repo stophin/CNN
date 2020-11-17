@@ -807,7 +807,7 @@ int test1() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy); 
 
-	/*
+		/*
 	EFTYPE X[][2] = {
 		{0.356649128, 0.030306376},
 		{0.105260929, 0.876207066},
@@ -897,7 +897,7 @@ int test1() {
 					ex = x;
 					ey = y;
 				}
-				y = output.neurals.link->output * divy / height_r;
+				y = output.neurals.link->output / height_r;
 				if (x <= show_width && y <= show_height) {
 					EP_SetColor(RED);
 					EP_Line(x, y, ex1, ey1);
@@ -907,6 +907,7 @@ int test1() {
 			}
 			EP_RenderFlush();
 #endif
+			int lind = -1;
 			while (1) {
 				INT ind;
 				while (scanf("%d", &ind) != 1) {
@@ -916,6 +917,25 @@ int test1() {
 				if (ind < 0 || ind >= sample_size_real) {
 					break;
 				}
+
+#ifdef _CNN_SHOW_GUI_
+				if (lind >= 0) {
+					x = lind / width_r;
+					for (int i = 0; i < show_height; i++) {
+						if (EP_GetPixel(x, i) == YELLOW) {
+							EP_SetPixel(x, i, BLACK);
+						}
+					}
+				}
+				x = ind / width_r;
+				for (int i = 0; i < show_height; i++) {
+					if (EP_GetPixel(x, i) == BLACK) {
+						EP_SetPixel(x, i, YELLOW);
+					}
+				}
+				EP_RenderFlush();
+#endif
+				lind = ind;
 
 				input.setNeural(X[ind], in_size);
 				nets.Forecast(input, &output);
@@ -937,7 +957,7 @@ int test1() {
 					do {
 						printf("%e %e", Y[ind][i], neural->output);
 						EFTYPE f = Y[ind][i] - neural->output;
-						f = f * f / (2 * divy);
+						f = f * f / (divy * divy);
 						e += f;
 						printf(" error: %lf\n", f);
 						i++;
@@ -1450,7 +1470,7 @@ int main(int argc, _TCHAR* argv[])
 	EP_Init(show_width, show_height);
 #endif
 	while (1) {
-		//test1();
-		test_sample();
+		test1();
+		//test_sample();
 	}
 }

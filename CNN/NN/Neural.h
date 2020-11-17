@@ -56,6 +56,8 @@ public:
 		weight(v){
 		kernel.W = NULL;
 		kernel.dW = NULL;
+		this->_kernel = NULL;
+		this->_deltaSum = NULL;
 	}
 	~Connector() {
 		back = NULL;
@@ -92,7 +94,7 @@ public:
 	INT uniqueID;
 	Connector * prev[Connector_Size];
 	Connector * next[Connector_Size];
-	void operator delete(void * _ptr){
+	void operator delete(void * _ptr) {
 		if (_ptr == NULL)
 		{
 			return;
@@ -105,6 +107,21 @@ public:
 			}
 		}
 		delete(_ptr);
+	}
+	void clear() {
+		void * _ptr = this;
+		if (_ptr == NULL)
+		{
+			return;
+		}
+		for (INT i = 0; i < Connector_Size; i++)
+		{
+			if (((Connector*)_ptr)->prev[i] != NULL || ((Connector*)_ptr)->next[i] != NULL)
+			{
+				return;
+			}
+		}
+		delete(this);
 	}
 };
 
@@ -122,6 +139,12 @@ public:
 		map.data = NULL;
 		map.error = NULL;
 		map.label = NULL;
+		this->_map = NULL;
+		this->_map_common = NULL;
+		this->_biasSum = NULL;
+		this->_delta = NULL;
+		this->_output = NULL;
+		this->_value = NULL;
 	}
 	~Neural() {
 		conn.~MultiLinkList();
@@ -215,12 +238,6 @@ public:
 			this->map_common = (double *)malloc(mem_size);
 			memset(this->map_common, 0, mem_size);
 		}
-		this->_map = NULL;
-		this->_map_common = NULL;
-		this->_biasSum = NULL;
-		this->_delta = NULL;
-		this->_output = NULL;
-		this->_value = NULL;
 	}
 
 	void uninit_cnn_neural() {
@@ -301,8 +318,6 @@ public:
 			connector->kernel.dW = (double *)malloc(mem_size);
 			memset(connector->kernel.dW, 0, mem_size);
 		}
-		connector->_kernel = NULL;
-		connector->_deltaSum = NULL;
 	}
 
 
@@ -326,6 +341,21 @@ public:
 			}
 		}
 		delete(_ptr);
+	}
+	void clear() {
+		void * _ptr = this;
+		if (_ptr == NULL)
+		{
+			return;
+		}
+		for (INT i = 0; i < Neural_Size; i++)
+		{
+			if (((Neural*)_ptr)->prev[i] != NULL || ((Neural*)_ptr)->next[i] != NULL)
+			{
+				return;
+			}
+		}
+		delete(this);
 	}
 };
 

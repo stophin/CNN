@@ -290,7 +290,7 @@ public:
 		}
 	}
 
-	void TrainCNN(Sample* sample, int size, int in_size, int out_size, double threshold) {
+	void TrainCNN(Sample* sample, int size, int train_size, int in_size, int out_size, double threshold) {
 		EFTYPE error;
 		Layer * layer, *_hidden, *__hidden, *hidden;
 		while (true) {
@@ -546,6 +546,7 @@ public:
 #ifdef _CNN_SHOW_LOSS_
 		EFTYPE *show_error = new EFTYPE[count_div];
 		EFTYPE max_error = 0;
+		int lcount = 0;
 #endif
 		printf("%d %d %d\n", sample_size, size, count_div);
 		while (true) {
@@ -680,15 +681,45 @@ public:
 					max_error = error;
 				}
 				if (count > 1) {
-					EP_ClearDevice();
 					EFTYPE width_r = (EFTYPE)count / show_width;
-					EFTYPE height_r = (EFTYPE)max_error / show_height;
-					EP_SetColor(WHITE);
-					ege::setlinewidth(1);
-					for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i ++) {
-						EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
+					if (count - lcount >= width_r) {
+						lcount = count;
+						EFTYPE height_r = (EFTYPE)max_error / show_height;
+						EP_ClearDevice();
+						EP_SetColor(WHITE);
+						ege::setlinewidth(1);
+						for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
+							EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
+						}
+#endif
+#ifdef _CNN_SHOW_GUI_
+						width_r = (EFTYPE)sample_size / show_width;
+						height_r = (EFTYPE)this->divoutrange / show_height;
+						//EP_ClearDevice();
+						int x, y, ex = 0, ey = 0, ex1 = 0, ey1 = 0;
+						for (int i = 1; i < sample_size; i++) {
+							input.setNeural((double*)((double*)X + i * in_size), in_size);
+							Forecast(input, &output);
+							x = i / width_r;
+							y = *((double*)((double*)Y + i * out_size)) / height_r;
+							if (x <= show_width && y <= show_height) {
+								EP_SetColor(GREEN);
+								EP_Line(x, y, ex, ey);
+								ex = x;
+								ey = y;
+							}
+							y = output.neurals.link->output / height_r;
+							if (x <= show_width && y <= show_height) {
+								EP_SetColor(RED);
+								EP_Line(x, y, ex1, ey1);
+								ex1 = x;
+								ey1 = y;
+							}
+						}
+#endif
+#ifdef _CNN_SHOW_LOSS_
+						EP_RenderFlush();
 					}
-					EP_RenderFlush();
 				}
 			}
 #endif
@@ -1279,6 +1310,7 @@ public:
 		ForwardTransfer();
 
 		//output
+		/*
 		neural = output.neurals.link;
 		if (neural) {
 			do {
@@ -1287,7 +1319,7 @@ public:
 				neural = output.neurals.next(neural);
 			} while (neural && neural != output.neurals.link);
 		}
-		printf("\n");
+		printf("\n");*/
 
 		//restore values
 		neural = input.neurals.link;
@@ -1312,7 +1344,7 @@ public:
 			if (neural) {
 				do {
 
-					_neural->output = neural->output;
+					_neural->output = neural->output * this->divoutrange;
 
 					_neural = out->neurals.next(_neural);
 					neural = output.neurals.next(neural);

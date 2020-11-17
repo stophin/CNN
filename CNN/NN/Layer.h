@@ -1823,6 +1823,21 @@ public:
 		}
 		delete(_ptr);
 	}
+	void clear() {
+		void * _ptr = this;
+		if (_ptr == NULL)
+		{
+			return;
+		}
+		for (INT i = 0; i < Layer_Size; i++)
+		{
+			if (((Layer*)_ptr)->prev[i] != NULL || ((Layer*)_ptr)->next[i] != NULL)
+			{
+				return;
+			}
+		}
+		delete(this);
+	}
 };
 
 #endif

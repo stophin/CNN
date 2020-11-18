@@ -289,6 +289,774 @@ public:
 			}
 		}
 	}
+	void TrainRNN(double **X, double **Y, int size, int in_size, int out_size, double threshold, int serial_size) {
+		EFTYPE error;
+		Layer * layer;
+		Layer *hidden, *_hidden;
+		Neural * neural, *_neural;
+		Connector *conn, *_conn;
+		NeuralGate *pgate, *lpgate;
+		//empty gate
+		hidden = hiddens.link;
+		if (hidden) {
+			do {
+
+				neural = hidden->neurals.link;
+				if (neural) {
+					do {
+						pgate = new NeuralGate();
+						pgate->t = -1;
+						neural->gates.insertLink(pgate);
+						neural->gate = pgate;
+
+						neural = hidden->neurals.next(neural);
+					} while (neural && neural != hidden->neurals.link);
+				}
+
+				hidden = hiddens.next(hidden);
+			} while (hidden && hidden != hiddens.link);
+		}
+		//serial_size gates
+		for (int i = 0; i < serial_size; i++) {
+			//input
+			neural = input.neurals.link;
+			if (neural) {
+				do {
+					pgate = new NeuralGate();
+					pgate->t = i;
+					neural->gates.insertLink(pgate);
+					neural->gate = pgate;
+
+					neural = input.neurals.next(neural);
+				} while (neural && neural != input.neurals.link);
+			}
+			//output
+			neural = output.neurals.link;
+			if (neural) {
+				do {
+					pgate = new NeuralGate();
+					pgate->t = i;
+					neural->gates.insertLink(pgate);
+					neural->gate = pgate;
+
+					neural = output.neurals.next(neural);
+				} while (neural && neural != output.neurals.link);
+			}
+			//output layer
+			pgate = new NeuralGate();
+			pgate->t = i;
+			output.gates.insertLink(pgate);
+			output.gate = pgate;
+			//hidden
+			hidden = hiddens.link;
+			if (hidden) {
+				do {
+
+					neural = hidden->neurals.link;
+					if (neural) {
+						do {
+
+							pgate = new NeuralGate();
+							pgate->t = i;
+							neural->gates.insertLink(pgate);
+							neural->gate = pgate;
+
+							neural = hidden->neurals.next(neural);
+						} while (neural && neural != hidden->neurals.link);
+					}
+
+					hidden = hiddens.next(hidden);
+				} while (hidden && hidden != hiddens.link);
+			}
+		}
+		//empty gate
+		hidden = hiddens.link;
+		if (hidden) {
+			do {
+
+				neural = hidden->neurals.link;
+				if (neural) {
+					do {
+						pgate = new NeuralGate();
+						pgate->t = -1;
+						neural->gates.insertLink(pgate);
+						neural->gate = pgate;
+
+						neural = hidden->neurals.next(neural);
+					} while (neural && neural != hidden->neurals.link);
+				}
+
+				hidden = hiddens.next(hidden);
+			} while (hidden && hidden != hiddens.link);
+		}
+		//hidden gates and output layer gates ara as follows:
+		//hidden: | empty gate | t=0   gate | t=1   gate | t=2   gate | ......     | t-1   gate | t     gate | empty gate |
+		//output:                           | t=0   gate | t=1   gate | t=2   gate | ......     | t-1   gate | t     gate |
+
+		int count = 0;
+		while (true) {
+			error = 0;
+			for (int iter = 0; iter < size; iter++) {
+				//reset gate to t=0
+				//input
+				neural = input.neurals.link;
+				if (neural) {
+					do {
+						neural->gate = neural->gates.link;
+
+						neural = input.neurals.next(neural);
+					} while (neural && neural != input.neurals.link);
+				}
+				//output
+				neural = output.neurals.link;
+				if (neural) {
+					do {
+						neural->gate = neural->gates.link;
+
+						neural = output.neurals.next(neural);
+					} while (neural && neural != output.neurals.link);
+				}
+				//output layer
+				output.gate = output.gates.link;
+				//hidden
+				hidden = hiddens.link;
+				if (hidden) {
+					do {
+
+						neural = hidden->neurals.link;
+						if (neural) {
+							do {
+								//skip empty gate
+								neural->gate = neural->gates.next(neural->gates.link);
+
+								neural = hidden->neurals.next(neural);
+							} while (neural && neural != hidden->neurals.link);
+						}
+
+						hidden = hiddens.next(hidden);
+					} while (hidden && hidden != hiddens.link);
+				}
+				int i, j, k;
+				//for each serial_size
+				for (int p = 0; p < serial_size; p++) {
+					//put input
+					i = 0;
+					neural = input.neurals.link;
+					if (neural) {
+						do {
+							neural->value = *(double*)((double*)X + iter * in_size * serial_size + i * serial_size + p);
+							if (neural->gate) {
+								neural->gate->in = neural->value;
+							}
+							i++;
+
+							neural = input.neurals.next(neural);
+						} while (neural && neural != input.neurals.link);
+					}
+					//put output
+					i = 0;
+					neural = output.neurals.link;
+					if (neural) {
+						do {
+							neural->value = *(double*)((double*)Y + iter * out_size * serial_size + i * serial_size + p);
+							if (neural->gate) {
+								neural->gate->in = neural->value;
+							}
+							i++;
+
+							neural = output.neurals.next(neural);
+						} while (neural && neural != output.neurals.link);
+					}
+
+					input.setScale(1.0 / divrange);
+					output.setScale(1.0 / divoutrange);
+
+					//forawrd transfer
+					//input
+					neural = input.neurals.link;
+					if (neural) {
+						do {
+							int c = 0;
+							EFTYPE t;
+							if (c > 0) {
+							}
+							else {
+								//input layer
+								t = neural->value;
+							}
+							neural->output = t;
+							if (neural->gate) {
+								neural->gate->out = neural->output;
+							}
+
+							neural = input.neurals.next(neural);
+						} while (neural && neural != input.neurals.link);
+					}
+					//hidden
+					hidden = hiddens.link;
+					if (hidden) {
+						do {
+
+							neural = hidden->neurals.link;
+							if (neural) {
+								do {
+									double inGate = 0.0;
+									double outGate = 0.0;
+									double forgetGate = 0.0;
+									double gGate = 0.0;
+
+									//from input
+									conn = neural->conn.link;
+									if (conn) {
+										do {
+											//for all neural that links before this neural
+											if (conn->forw == neural) {
+												_neural = conn->back;
+												if (_neural) {
+													inGate += _neural->output * conn->gate.W_I;
+													outGate += _neural->output * conn->gate.W_O;
+													forgetGate += _neural->output * conn->gate.W_F;
+													gGate += _neural->output * conn->gate.W_G;
+												}
+											}
+
+											conn = neural->conn.next(conn);
+										} while (conn && conn != neural->conn.link);
+									}
+									
+									//for hidden itself
+									conn = neural->rconn.link;
+									if (conn) {
+										do {
+											//for all neural that links after this neural
+											if (conn->back == neural) {
+												_neural = conn->forw;
+												if (_neural) {
+													if (_neural->gate) {
+														//get previous gate
+														NeuralGate& prev_gate = *_neural->gates.prev(_neural->gate);
+														inGate += prev_gate.h * conn->gate.U_I;
+														outGate += prev_gate.h * conn->gate.U_O;
+														forgetGate += prev_gate.h * conn->gate.U_F;
+														gGate += prev_gate.h * conn->gate.U_G;
+													}
+												}
+											}
+
+											conn = neural->rconn.next(conn);
+										} while (conn && conn != neural->rconn.link);
+									}
+
+									//accumulate
+									if (neural->gate) {
+										NeuralGate& gate = *neural->gate;
+										gate.in_gate = hidden->sigmod(inGate);
+										gate.out_gate = hidden->sigmod(outGate);
+										gate.forget_gate = hidden->sigmod(forgetGate);
+										gate.g_gate = hidden->sigmod(gGate);
+
+										NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+										gate.state = gate.forget_gate * prev_gate.state + gate.g_gate * gate.in_gate;
+										gate.h = gate.in_gate * hidden->tan_h(gate.state);
+									}
+
+									neural = hidden->neurals.next(neural);
+								} while (neural && neural != hidden->neurals.link);
+							}
+
+							hidden = hiddens.next(hidden);
+						} while (hidden && hidden != hiddens.link);
+					}
+
+					//output
+					neural = output.neurals.link;
+					if (neural) {
+						do {
+							INT c = 0;
+							EFTYPE t = 0;
+							INT size = 0;
+							conn = neural->conn.link;
+							if (conn) {
+								do {
+									//for all neural that links before this neural
+									if (conn->forw == neural) {
+										Neural * _neural = conn->back;
+										if (_neural) {
+											if (_neural->gate) {
+												NeuralGate& gate = *_neural->gate;
+												t += conn->weight * gate.h;
+											}
+										}
+										c++;
+									}
+
+									conn = neural->conn.next(conn);
+								} while (conn && conn != neural->conn.link);
+							}
+							if (c > 0) {
+								//formula:
+								//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+								//OUTPUT(i) = F(NET(i))
+								//bias
+								//t += neural->bias;
+								neural->sum = t;
+								//t = output.eva_fun(t);
+								t = output.sigmod(t);
+							}
+							else {
+								//input layer
+								t = neural->value;
+							}
+							neural->output = t;
+							if (neural->gate) {
+								neural->gate->out = neural->output;
+							}
+
+							neural = output.neurals.next(neural);
+						} while (neural && neural != output.neurals.link);
+					}
+
+					//delta
+					if (output.gate) {
+						NeuralGate& gate = *output.gate;
+						EFTYPE e = 0;
+						gate.y_delta = 0;
+						neural = output.neurals.link;
+						if (neural) {
+							do {
+								gate.y_delta += (neural->value - neural->output) * output.sigmod_1(neural->output);
+								e += fabs(neural->value - neural->output);
+
+								neural = output.neurals.next(neural);
+							} while (neural && neural != output.neurals.link);
+						}
+						error += e;
+					}
+
+					//move forawrd t+1
+					//input
+					neural = input.neurals.link;
+					if (neural) {
+						do {
+							if (neural->gate) {
+								neural->gate = neural->gates.next(neural->gate);
+							}
+
+							neural = input.neurals.next(neural);
+						} while (neural && neural != input.neurals.link);
+					}
+					//output
+					neural = output.neurals.link;
+					if (neural) {
+						do {
+							if (neural->gate) {
+								neural->gate = neural->gates.next(neural->gate);
+							}
+
+							neural = output.neurals.next(neural);
+						} while (neural && neural != output.neurals.link);
+					}
+					//output layer
+					output.gate = output.gates.next(output.gate);
+					//hidden
+					hidden = hiddens.link;
+					if (hidden) {
+						do {
+
+							neural = hidden->neurals.link;
+							if (neural) {
+								do {
+									if (neural->gate) {
+										neural->gate = neural->gates.next(neural->gate);
+									}
+
+									neural = hidden->neurals.next(neural);
+								} while (neural && neural != hidden->neurals.link);
+							}
+
+							hidden = hiddens.next(hidden);
+						} while (hidden && hidden != hiddens.link);
+					}
+				}
+
+				//backward propagation
+				//move gate to t
+				//input
+				neural = input.neurals.link;
+				if (neural) {
+					do {
+						neural->gate = neural->gates.prev(neural->gates.link);
+
+						neural = input.neurals.next(neural);
+					} while (neural && neural != input.neurals.link);
+				}
+				//output
+				neural = output.neurals.link;
+				if (neural) {
+					do {
+						neural->gate = neural->gates.prev(neural->gates.link);
+
+						neural = output.neurals.next(neural);
+					} while (neural && neural != output.neurals.link);
+				}
+				//output layer
+				output.gate = output.gates.prev(output.gates.link);
+				//hidden
+				hidden = hiddens.link;
+				if (hidden) {
+					do {
+
+						neural = hidden->neurals.link;
+						if (neural) {
+							do {
+								//skip empty gate
+								neural->gate = neural->gates.prev(neural->gates.prev(neural->gates.link));
+
+								neural = hidden->neurals.next(neural);
+							} while (neural && neural != hidden->neurals.link);
+						}
+
+						hidden = hiddens.next(hidden);
+					} while (hidden && hidden != hiddens.link);
+				}
+				//for each t gate
+				pgate = output.gate;
+				if (pgate) {
+					do {
+						//output
+						neural = output.neurals.link;
+						if (neural) {
+							do {
+								conn = neural->conn.link;
+								if (conn) {
+									do {
+										//for all neural that links before this neural
+										if (conn->forw == neural) {
+											Neural * _neural = conn->back;
+											if (_neural) {
+												if (_neural->gate) {
+													NeuralGate& gate = *_neural->gate;
+													conn->weight += output.learning_rate * pgate->y_delta * gate.h;
+												}
+											}
+										}
+
+										conn = neural->conn.next(conn);
+									} while (conn && conn != neural->conn.link);
+								}
+
+								neural = output.neurals.next(neural);
+							} while (neural && neural != output.neurals.link);
+						}
+
+
+						//hidden
+						hidden = hiddens.link;
+						if (hidden) {
+							do {
+
+								neural = hidden->neurals.link;
+								if (neural) {
+									do {
+										pgate->h_delta = 0;
+										//from output
+										conn = neural->conn.link;
+										if (conn) {
+											do {
+												//for all neural that links after this neural
+												if (conn->back == neural) {
+													_neural = conn->forw;
+													if (_neural) {
+														pgate->h_delta += pgate->y_delta * conn->weight;
+													}
+												}
+
+												conn = neural->conn.next(conn);
+											} while (conn && conn != neural->conn.link);
+										}
+
+										//for hidden itself
+										conn = neural->rconn.link;
+										if (conn) {
+											do {
+												//for all neural that links after this neural
+												if (conn->back == neural) {
+													_neural = conn->forw;
+													if (_neural) {
+														if (_neural->gate) {
+															//get next gate
+															NeuralGate& future_gate = *_neural->gates.next(_neural->gate);
+															pgate->h_delta += future_gate.I_delta * conn->gate.U_I;
+															pgate->h_delta += future_gate.F_delta * conn->gate.U_F;
+															pgate->h_delta += future_gate.O_delta * conn->gate.U_O;
+															pgate->h_delta += future_gate.G_delta * conn->gate.U_G;
+														}
+													}
+												}
+
+												conn = neural->rconn.next(conn);
+											} while (conn && conn != neural->rconn.link);
+										}
+
+										//accumulate delta
+										if (neural->gate) {
+											NeuralGate& gate = *neural->gate;
+											NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+											NeuralGate& future_gate = *neural->gates.next(neural->gate);
+											gate.O_delta = pgate->h_delta * hidden->tan_h(gate.state) * hidden->sigmod_1(gate.out_gate);
+											gate.state_delta = pgate->h_delta * gate.out_gate * hidden->tan_h_1(hidden->tan_h(gate.state)) +
+												future_gate.state_delta * future_gate.forget_gate;
+											gate.F_delta = gate.state_delta * prev_gate.state * hidden->sigmod_1(gate.forget_gate);
+											gate.I_delta = gate.state_delta * gate.g_gate * hidden->sigmod_1(gate.in_gate);
+											gate.G_delta = gate.state_delta * gate.in_gate * hidden->sigmod_1(gate.g_gate);
+
+											//adjust weight
+											//for hidden itself
+											conn = neural->rconn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																conn->gate.U_I += hidden->learning_rate * gate.I_delta * prev_gate.h;
+																conn->gate.U_F += hidden->learning_rate * gate.F_delta * prev_gate.h;
+																conn->gate.U_O += hidden->learning_rate * gate.O_delta * prev_gate.h;
+																conn->gate.U_G += hidden->learning_rate * gate.G_delta * prev_gate.h;
+															}
+														}
+													}
+
+													conn = neural->rconn.next(conn);
+												} while (conn && conn != neural->rconn.link);
+											}
+											//for input
+											conn = neural->conn.link;
+											if (conn) {
+												do {
+													//for all neural that links before this neural
+													if (conn->forw == neural) {
+														_neural = conn->back;
+														if (_neural) {
+															conn->gate.W_I += hidden->learning_rate * gate.I_delta * _neural->output;
+															conn->gate.W_F += hidden->learning_rate * gate.F_delta * _neural->output;
+															conn->gate.W_O += hidden->learning_rate * gate.O_delta * _neural->output;
+															conn->gate.W_G += hidden->learning_rate * gate.G_delta * _neural->output;
+														}
+													}
+
+													conn = neural->conn.next(conn);
+												} while (conn && conn != neural->conn.link);
+											}
+										}
+
+										neural = hidden->neurals.next(neural);
+									} while (neural && neural != hidden->neurals.link);
+								}
+
+								hidden = hiddens.next(hidden);
+							} while (hidden && hidden != hiddens.link);
+						}
+
+						//move to t - 1
+						//input
+						neural = input.neurals.link;
+						if (neural) {
+							do {
+								if (neural->gate) {
+									neural->gate = neural->gates.prev(neural->gate);
+								}
+
+								neural = input.neurals.next(neural);
+							} while (neural && neural != input.neurals.link);
+						}
+						//output
+						neural = output.neurals.link;
+						if (neural) {
+							do {
+								if (neural->gate) {
+									neural->gate = neural->gates.prev(neural->gate);
+								}
+
+								neural = output.neurals.next(neural);
+							} while (neural && neural != output.neurals.link);
+						}
+						//hidden
+						hidden = hiddens.link;
+						if (hidden) {
+							do {
+
+								neural = hidden->neurals.link;
+								if (neural) {
+									do {
+										if (neural->gate) {
+											neural->gate = neural->gates.prev(neural->gate);
+										}
+
+										neural = hidden->neurals.next(neural);
+									} while (neural && neural != hidden->neurals.link);
+								}
+
+								hidden = hiddens.next(hidden);
+							} while (hidden && hidden != hiddens.link);
+						}
+
+						pgate = output.gates.prev(pgate);
+					} while (pgate && pgate != output.gate);
+				}
+
+				if (iter % 1000 == 0) {
+					printf("\n");
+					int out = 0;
+					for (int i = 0; i < in_size; i++) {
+						int in = 0;
+						for (int p = serial_size - 1; p >= 0; p--) {
+							double value = *(double*)((double*)X + iter * in_size * serial_size + i * serial_size + p);
+							printf("%.2f ", value);
+							in += value * pow(2, p);
+						}
+						printf("\t%d\n", in);
+						out += in;
+					}
+					printf("\t\t\t\t%d\n", out);
+					for (int i = 0; i < out_size; i++) {
+						int in = 0;
+						for (int p = serial_size - 1; p >= 0; p--) {
+							double value = *(double*)((double*)Y + iter * out_size * serial_size + i * serial_size + p);
+							printf("%.2f ", value);
+							in += value * pow(2, p);
+						}
+						printf("\t%d\n", in);
+					}
+					//put input
+					out = 0;
+					neural = input.neurals.link;
+					if (neural) {
+						do {
+							//for each serial
+							int in = 0;
+							int p = serial_size - 1;
+							lpgate = neural->gates.prev(neural->gates.link);
+							pgate = lpgate;
+							if (pgate) {
+								do {
+									double value = pgate->out;
+									printf("%.2f ", value);
+									in += value * pow(2, p);
+									p--;
+
+									pgate = neural->gates.prev(pgate);
+								} while (pgate && pgate != lpgate);
+							}
+							printf("\t%d\n", in);
+							out += in;
+
+							neural = input.neurals.next(neural);
+						} while (neural && neural != input.neurals.link);
+					}
+					printf("\t\t\t\t%d\n", out);
+					//put output
+					neural = output.neurals.link;
+					if (neural) {
+						do {
+							//for each serial
+							int in = 0;
+							int p = serial_size - 1;
+							lpgate = neural->gates.prev(neural->gates.link);
+							pgate = lpgate;
+							if (pgate) {
+								do {
+									double value = pgate->out;
+									printf("%.2f ", value);
+									in += value * pow(2, p);
+									p--;
+
+									pgate = neural->gates.prev(pgate);
+								} while (pgate && pgate != lpgate);
+							}
+							printf("\t%d\n", in);
+
+							neural = output.neurals.next(neural);
+						} while (neural && neural != output.neurals.link);
+					}
+
+					//put output
+					neural = output.neurals.link;
+					if (neural) {
+						do {
+							//for each serial
+							int in = 0;
+							int p = serial_size - 1;
+							lpgate = neural->gates.prev(neural->gates.link);
+							pgate = lpgate;
+							if (pgate) {
+								do {
+									double value = (int)(pgate->out + 0.5);
+									printf("%.2f ", value);
+									in += value * pow(2, p);
+									p--;
+
+									pgate = neural->gates.prev(pgate);
+								} while (pgate && pgate != lpgate);
+							}
+							printf("\t%d\n", in);
+
+							neural = output.neurals.next(neural);
+						} while (neural && neural != output.neurals.link);
+					}
+					getch();
+				}
+
+				printf("[ %d/%d]Error is: %e\r", iter, count, error);
+				if (error < threshold) {
+					printf("\n");
+					break;
+				}
+			}
+			count++;
+		}
+
+		//release
+		//input
+		neural = input.neurals.link;
+		if (neural) {
+			do {
+				neural->gates.~MultiLinkList();
+
+				neural = input.neurals.next(neural);
+			} while (neural && neural != input.neurals.link);
+		}
+		//output
+		neural = output.neurals.link;
+		if (neural) {
+			do {
+				neural->gates.~MultiLinkList();
+
+				neural = output.neurals.next(neural);
+			} while (neural && neural != output.neurals.link);
+		}
+		//output layer
+		output.gates.~MultiLinkList();
+		//hidden
+		hidden = hiddens.link;
+		if (hidden) {
+			do {
+
+				neural = hidden->neurals.link;
+				if (neural) {
+					do {
+
+						neural->gates.~MultiLinkList();
+
+						neural = hidden->neurals.next(neural);
+					} while (neural && neural != hidden->neurals.link);
+				}
+
+				hidden = hiddens.next(hidden);
+			} while (hidden && hidden != hiddens.link);
+		}
+	}
 
 	void TrainCNN(Sample* sample, int size, int train_size, int in_size, int out_size, double threshold) {
 		EFTYPE error;

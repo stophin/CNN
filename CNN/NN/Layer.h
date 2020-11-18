@@ -11,15 +11,21 @@ class Layer {
 public:
 	Layer() :
 		mode(LayerMode::Normal),
-		neurals(0) {
+		neurals(0),
+		gates(0){
 	}
 	Layer(LayerMode mode) :
 		mode(mode),
-		neurals(0) {
+		neurals(0),
+		gates(0) {
 	}
 	~Layer() {
 		neurals.~MultiLinkList();
 	};
+
+	//for RNN
+	MultiLinkList<NeuralGate> gates;
+	NeuralGate * gate;
 
 	MultiLinkList<Neural> neurals;
 
@@ -90,6 +96,44 @@ public:
 			} while (_neural && _neural != this->neurals.link);
 		}
 		return;
+	}
+	void makeRecursiveConnection() {
+		int i = 0;
+		Neural * _neural = this->neurals.link;
+		if (_neural) {
+			do {
+				_neural->rconn.linkindex += i;
+				i++;
+
+				_neural = this->neurals.next(_neural);
+			} while (_neural && _neural != this->neurals.link);
+		}
+		Neural * neural = this->neurals.link;
+		if (neural) {
+			do {
+				//connect to itself
+				Layer& layer = *this;
+				_neural = layer.neurals.link;
+				if (_neural) {
+					do {
+						//initialized weight is 0
+						Connector * conn = new Connector(0);
+						conn->back = neural;
+						conn->forw = _neural;
+						conn->weight = WEIGHT;
+						conn->gate.reset();
+						neural->rconn.insertLink(conn);
+						if (neural != _neural) {
+							_neural->rconn.insertLink(conn);
+						}
+
+						_neural = layer.neurals.next(_neural);
+					} while (_neural && _neural != layer.neurals.link);
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
 	}
 
 	void makeConnection(Layer& layer, INT index, bool *pconnection = NULL) {

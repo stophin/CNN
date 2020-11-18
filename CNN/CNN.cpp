@@ -1464,13 +1464,119 @@ int test_sample() {
 	free(test_sample);
 	return 0;
 }
+//将一个10进制整数转换为2进制数
+void int2binary(double _n, double *arr, int binary_dim)
+{
+	int i = 0;
+	int n = (int)_n;
+	while (n)
+	{
+		arr[i++] = n % 2;
+		n /= 2;
+	}
+	while (i < binary_dim)
+		arr[i++] = 0;
+}
+
+int test_rnn() {
+	INT i, j, k;
+	
+	Network nets;
+
+	//inputs
+	nets.input.addNeural(1);
+	nets.input.addNeural(2);
+
+	//outputs
+	nets.output.addNeural(1);
+	
+	int hidden_size = 26;
+	Layer * hidden = new Layer();
+	for (i = 0; i < hidden_size; i++) {
+		hidden->addNeural(1 + i);
+	}
+	nets.hiddens.insertLink(hidden);
+	nets.layers.insertLink(hidden, &nets.output, NULL);
+
+	//make connections
+	hidden = nets.layers.link;
+	if (hidden) {
+		i = 0;
+		Layer * _hidden = nets.layers.next(hidden);
+		if (_hidden && _hidden != nets.layers.link) {
+			do {
+
+				hidden->makeConnection(*_hidden, ++i);
+				hidden->makeRecursiveConnection();
+
+				hidden = _hidden;
+				_hidden = nets.layers.next(_hidden);
+			} while (_hidden && _hidden != nets.layers.link);
+		}
+	}
+
+	nets.Traverse();
+
+	//test input
+	Layer input(LayerMode::Input);
+	input.addNeural(1);
+	input.addNeural(2);
+	Layer output(LayerMode::Output);
+	output.addNeural(1);
+
+	INT sample_size = 11000;
+	INT sample_size_real = 11000;
+	INT in_size = 2;
+	INT out_size = 1;
+	EFTYPE divx = 1.0;
+	EFTYPE divy = 1.0;
+	nets.Scale(divx, divy);
+
+	INT serial_size = 8;
+	double * X = new double[sample_size_real * in_size * serial_size];
+	double * Y = new double[sample_size_real * out_size * serial_size];
+
+	int largest_number = pow(2, serial_size);
+
+	clock_t start, end;
+	int count = 0;
+	while (1) {
+		count++;
+
+		nets.setLearningRate(0.1);
+
+		for (i = 0; i < sample_size_real; i++) {
+			X[i * in_size * serial_size + 0 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
+			X[i * in_size * serial_size + 1 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
+			Y[i * out_size * serial_size + 0 * serial_size + 0] = X[i * in_size * serial_size + 0 * serial_size + 0] + X[i * in_size * serial_size + 1 * serial_size + 0];
+			if (i < 10) {
+				printf("%.2f %.2f %.2f\n", X[i * in_size * serial_size + 0 * serial_size + 0], X[i * in_size * serial_size + 1 * serial_size + 0], Y[i * out_size * serial_size + 0 * serial_size + 0]);
+			}
+			int2binary(X[i * in_size * serial_size + 0 * serial_size + 0], &X[i * in_size * serial_size + 0 * serial_size + 0], serial_size);
+			int2binary(X[i * in_size * serial_size + 1 * serial_size + 0], &X[i * in_size * serial_size + 1 * serial_size + 0], serial_size);
+			int2binary(Y[i * out_size * serial_size + 0 * serial_size + 0], &Y[i * out_size * serial_size + 0 * serial_size + 0], serial_size);
+		}
+
+		start = clock();
+		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 0.001, serial_size);
+		end = clock();
+		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
+
+		getch();
+	}
+	delete[] X;
+	delete[] Y;
+
+	return 0;
+}
 int main(int argc, _TCHAR* argv[])
 {
 #ifdef _CNN_SHOW_GUI_
 	EP_Init(show_width, show_height);
 #endif
 	while (1) {
-		test1();
+		//test1();
 		//test_sample();
+		test_rnn();
 	}
 }

@@ -46,6 +46,112 @@ enum LayerMode {
 	Output
 };
 
+class Gate {
+public:
+	Gate() {}
+	~Gate() {}
+	void reset() {
+		W_I = WEIGHT;
+		U_I = WEIGHT;
+		W_F = WEIGHT;
+		U_F = WEIGHT;
+		W_O = WEIGHT;
+		U_O = WEIGHT;
+		W_G = WEIGHT;
+		U_G = WEIGHT;
+		W_out = WEIGHT;
+	}
+	double W_I;
+	double U_I;
+	double W_F;
+	double U_F;
+	double W_O;
+	double U_O;
+	double W_G;
+	double U_G;
+	double W_out;
+};
+
+class NeuralGate {
+public:
+	NeuralGate() {
+		reset();
+	}
+
+	~NeuralGate() {
+
+	}
+
+	void reset() {
+		in_gate = 0;
+		out_gate = 0;
+		forget_gate = 0;
+		g_gate = 0;
+		state = 0;
+		h = 0;
+		y_delta = 0;
+		h_delta = 0;
+		O_delta = 0;
+		I_delta = 0;
+		F_delta = 0;
+		G_delta = 0;
+		state_delta = 0;
+	}
+
+	int t = 0;
+	double in_gate;
+	double out_gate;
+	double forget_gate;
+	double g_gate;
+	double state;
+	double h;
+	double y_delta;
+	double h_delta;
+	double O_delta;
+	double I_delta;
+	double F_delta;
+	double G_delta;
+	double state_delta;
+	double in;
+	double out;
+
+
+	// for multilinklist
+#define NeuralGate_Size 2
+	INT uniqueID;
+	NeuralGate * prev[NeuralGate_Size];
+	NeuralGate * next[NeuralGate_Size];
+	void operator delete(void * _ptr) {
+		if (_ptr == NULL)
+		{
+			return;
+		}
+		for (INT i = 0; i < NeuralGate_Size; i++)
+		{
+			if (((NeuralGate*)_ptr)->prev[i] != NULL || ((NeuralGate*)_ptr)->next[i] != NULL)
+			{
+				return;
+			}
+		}
+		delete(_ptr);
+	}
+	void clear() {
+		void * _ptr = this;
+		if (_ptr == NULL)
+		{
+			return;
+		}
+		for (INT i = 0; i < NeuralGate_Size; i++)
+		{
+			if (((NeuralGate*)_ptr)->prev[i] != NULL || ((NeuralGate*)_ptr)->next[i] != NULL)
+			{
+				return;
+			}
+		}
+		delete(this);
+	}
+};
+
 typedef class Neural Neural;
 typedef class Connector Connector;
 class Connector {
@@ -76,6 +182,9 @@ public:
 	int kernel_h;
 	Kernel kernel;
 	Kernel *_kernel;
+
+	//for RNN
+	Gate gate;
 
 	void uninit_cnn_neural() {
 		if (this->kernel.W) {
@@ -134,7 +243,9 @@ public:
 		delta(0),
 		bias(0),
 		conn(0),
-		sum(0){
+		sum(0),
+		gates(0),
+		rconn(3){
 		map_common = NULL;
 		map.data = NULL;
 		map.error = NULL;
@@ -151,6 +262,11 @@ public:
 		uninit_cnn_neural();
 	}
 	void* layer;
+
+	//for RNN
+	MultiLinkList<NeuralGate> gates;
+	NeuralGate * gate;
+	MultiLinkList<Connector> rconn;
 
 	EFTYPE value;
 	EFTYPE output;

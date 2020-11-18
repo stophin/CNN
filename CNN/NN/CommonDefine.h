@@ -20,7 +20,7 @@
 #include "../NN/mt19937ar.h"
 
 //Define Maxium Hidden Layer
-#define MAX_HIDDEN_LAYER		10
+#define MAX_HIDDEN_LAYER		30 + 2
 
 //Define Maxium Simulation Range
 #define MAX_SIMULATION_RANGE_INPUT	1.0

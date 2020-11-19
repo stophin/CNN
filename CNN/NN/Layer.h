@@ -11,21 +11,15 @@ class Layer {
 public:
 	Layer() :
 		mode(LayerMode::Normal),
-		neurals(0),
-		gates(0){
+		neurals(0){
 	}
 	Layer(LayerMode mode) :
 		mode(mode),
-		neurals(0),
-		gates(0) {
+		neurals(0){
 	}
 	~Layer() {
 		neurals.~MultiLinkList();
 	};
-
-	//for RNN
-	MultiLinkList<NeuralGate> gates;
-	NeuralGate * gate;
 
 	MultiLinkList<Neural> neurals;
 
@@ -176,6 +170,7 @@ public:
 							conn->back = neural;
 							conn->forw = _neural;
 							conn->weight = WEIGHT;
+							conn->gate.reset();
 							neural->conn.insertLink(conn);
 							_neural->conn.insertLink(conn);
 							if (do_connection == 2) {
@@ -221,6 +216,78 @@ public:
 			} while (neural && neural != this->neurals.link);
 		}
 	}
+
+	//for RNN start --------------------------------------------------------------
+	void resetGate() {
+		Neural * neural;
+		neural = this->neurals.link;
+		if (neural) {
+			do {
+				neural->gate = neural->gates.link;
+				//skip empty gate
+				while (neural->gate->t < 0) {
+					neural->gate = neural->gates.next(neural->gate);
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void nextGate() {
+		Neural * neural;
+		neural = this->neurals.link;
+		if (neural) {
+			do {
+				neural->gate = neural->gates.next(neural->gate);
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void backGate() {
+		Neural * neural;
+		neural = this->neurals.link;
+		if (neural) {
+			do {
+				neural->gate = neural->gates.prev(neural->gates.link);
+				//skip empty gate
+				while (neural->gate->t < 0) {
+					neural->gate = neural->gates.prev(neural->gate);
+				}
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void prevGate() {
+		Neural * neural;
+		neural = this->neurals.link;
+		if (neural) {
+			do {
+				neural->gate = neural->gates.prev(neural->gate);
+
+				neural = this->neurals.next(neural);
+			} while (neural && neural != this->neurals.link);
+		}
+	}
+	void setNeuralSerial(EFTYPE data[], int serial_size, int p) {
+		int i = 0;
+		Neural * _neural = this->neurals.link;
+		if (_neural) {
+			do {
+
+				_neural->value = *(double*)((double*)data + i * serial_size + p);
+				if (_neural->gate) {
+					_neural->gate->in = _neural->value;
+				}
+				i++;
+
+				_neural = this->neurals.next(_neural);
+			} while (_neural && _neural != this->neurals.link);
+		}
+		return;
+	}
+	//for RNN end-----------------------------------------------------------------
 
 	void setScale(EFTYPE scale) {
 		Neural * neural = this->neurals.link;
@@ -289,6 +356,10 @@ public:
 				INT c = 0;
 				EFTYPE t = 0;
 				INT size = 0;
+				double inGate = 0.0;
+				double outGate = 0.0;
+				double forgetGate = 0.0;
+				double gGate = 0.0;
 				double scale_factor = 0.25;
 				if (mode == LayerMode::Conv) {
 					size = neural->map_w * neural->map_h;
@@ -307,6 +378,18 @@ public:
 							if (_neural) {
 								if (this->mode == LayerMode::Normal) {
 									t += conn->weight * _neural->output;
+								}
+								else if (this->mode == LayerMode::RecursiveOut) {
+									if (_neural->gate) {
+										NeuralGate& gate = *_neural->gate;
+										t += conn->weight * gate.h;
+									}
+								}
+								else if (this->mode == LayerMode::Recursive) {
+									inGate += _neural->output * conn->gate.W_I;
+									outGate += _neural->output * conn->gate.W_O;
+									forgetGate += _neural->output * conn->gate.W_F;
+									gGate += _neural->output * conn->gate.W_G;
 								}
 								else {
 									if (mode == LayerMode::Conv) {
@@ -367,6 +450,63 @@ public:
 						t = neural->value;
 					}
 					neural->output = t;
+				}
+				else if (this->mode == LayerMode::RecursiveIn || 
+					this->mode == LayerMode::RecursiveOut) {
+					if (c > 0) {
+						//formula:
+						//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+						//OUTPUT(i) = F(NET(i))
+						//bias
+						//t += neural->bias;
+						neural->sum = t;
+						t = sigmod(t);
+					}
+					else {
+						//input layer
+						t = neural->value;
+					}
+					neural->output = t;
+					if (neural->gate) {
+						neural->gate->out = neural->output;
+					}
+				}
+				else if (this->mode == LayerMode::Recursive) {
+					//for hidden itself
+					conn = neural->rconn.link;
+					if (conn) {
+						do {
+							//for all neural that links after this neural
+							if (conn->back == neural) {
+								Neural *_neural = conn->forw;
+								if (_neural) {
+									if (_neural->gate) {
+										//get previous gate
+										NeuralGate& prev_gate = *_neural->gates.prev(_neural->gate);
+										inGate += prev_gate.h * conn->gate.U_I;
+										outGate += prev_gate.h * conn->gate.U_O;
+										forgetGate += prev_gate.h * conn->gate.U_F;
+										gGate += prev_gate.h * conn->gate.U_G;
+									}
+								}
+							}
+
+							conn = neural->rconn.next(conn);
+						} while (conn && conn != neural->rconn.link);
+					}
+
+					//accumulate
+					if (neural->gate) {
+						NeuralGate& gate = *neural->gate;
+						gate.in_gate = sigmod(inGate);
+						gate.out_gate = sigmod(outGate);
+						gate.forget_gate = sigmod(forgetGate);
+						gate.g_gate = sigmod(gGate);
+
+						NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+						gate.state = gate.forget_gate * prev_gate.state + gate.g_gate * gate.in_gate;
+						gate.h = gate.in_gate * tan_h(gate.state);
+					}
 				}
 				else {
 					if (c > 0) {
@@ -536,13 +676,24 @@ public:
 			do {
 				if (mode == LayerMode::Normal) {
 					cur = 0.5 * (neural->value - neural->output) * (neural->value - neural->output) / this->neurals.linkcount;
+					//ans += cur;
+					if (ans < cur) {
+						ans = cur;
+					}
+				}
+				else if (mode == LayerMode::RecursiveOut) {
+					if (neural->gate) {
+						neural->gate->y_delta = (neural->value - neural->output) * sigmod_1(neural->output);
+						cur = fabs(neural->value - neural->output);
+						ans += cur;
+					}
 				}
 				else {
 					cur = 0.5 * (neural->map.data[0] - neural->map.label[0]) * (neural->map.data[0] - neural->map.label[0]) / this->neurals.linkcount;
-				}
-				//ans += cur;
-				if (ans < cur) {
-					ans = cur;
+					//ans += cur;
+					if (ans < cur) {
+						ans = cur;
+					}
 				}
 
 				neural = this->neurals.next(neural);

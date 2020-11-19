@@ -1481,7 +1481,7 @@ void int2binary(double _n, double *arr, int binary_dim)
 int test_rnn() {
 	INT i, j, k;
 	
-	Network nets;
+	Network nets(LayerMode::RecursiveIn, LayerMode::RecursiveOut);
 
 	//inputs
 	nets.input.addNeural(1);
@@ -1491,7 +1491,7 @@ int test_rnn() {
 	nets.output.addNeural(1);
 	
 	int hidden_size = 26;
-	Layer * hidden = new Layer();
+	Layer * hidden = new Layer(LayerMode::Recursive);
 	for (i = 0; i < hidden_size; i++) {
 		hidden->addNeural(1 + i);
 	}
@@ -1507,7 +1507,6 @@ int test_rnn() {
 			do {
 
 				hidden->makeConnection(*_hidden, ++i);
-				hidden->makeRecursiveConnection();
 
 				hidden = _hidden;
 				_hidden = nets.layers.next(_hidden);
@@ -1515,16 +1514,19 @@ int test_rnn() {
 		}
 	}
 
+	hidden = nets.hiddens.link;
+	if (hidden) {
+		do {
+
+			hidden->makeRecursiveConnection();
+
+			hidden = nets.hiddens.next(hidden);
+		} while (hidden && hidden != nets.hiddens.link);
+	}
+
 	nets.Traverse();
 
-	//test input
-	Layer input(LayerMode::Input);
-	input.addNeural(1);
-	input.addNeural(2);
-	Layer output(LayerMode::Output);
-	output.addNeural(1);
-
-	INT sample_size = 11000;
+	INT sample_size = 1000;
 	INT sample_size_real = 11000;
 	INT in_size = 2;
 	INT out_size = 1;
@@ -1558,7 +1560,7 @@ int test_rnn() {
 		}
 
 		start = clock();
-		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 0.001, serial_size);
+		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 0.001, serial_size, sample_size_real, 10000);
 		end = clock();
 		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
 

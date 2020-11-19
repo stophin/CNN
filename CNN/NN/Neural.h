@@ -43,7 +43,10 @@ enum LayerMode {
 	Conv,
 	MaxPool,
 	AvgPool,
-	Output
+	Output,
+	Recursive,
+	RecursiveIn,
+	RecursiveOut
 };
 
 class Gate {

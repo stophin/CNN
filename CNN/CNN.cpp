@@ -1540,6 +1540,9 @@ int test_rnn() {
 
 	int largest_number = pow(2, serial_size);
 
+
+	nets.prepareRNN(serial_size);
+
 	clock_t start, end;
 	int count = 0;
 	while (1) {
@@ -1560,14 +1563,216 @@ int test_rnn() {
 		}
 
 		start = clock();
-		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 0.001, serial_size, sample_size_real, 10000);
+		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 1e1, serial_size, sample_size_real, 10000);
 		end = clock();
 		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
 
-		getch();
+
+		//if (kbhit())
+		{
+			//EP_ClearDevice();
+			int lind = -1;
+			while (1) {
+				INT ind;
+				while (scanf("%d", &ind) != 1) {
+					getchar();
+					fflush(stdin);
+				}
+				if (ind < 0 || ind >= sample_size_real) {
+					break;
+				}
+
+#ifdef _CNN_SHOW_GUI_
+				int x;
+				EFTYPE width_r = (EFTYPE)sample_size_real / show_width;
+				EFTYPE height_r = (EFTYPE)divy / show_height;
+				if (lind >= 0) {
+					x = lind / width_r;
+					for (int i = 0; i < show_height; i++) {
+						if (EP_GetPixel(x, i) == YELLOW) {
+							EP_SetPixel(x, i, BLACK);
+						}
+					}
+				}
+				x = ind / width_r;
+				for (int i = 0; i < show_height; i++) {
+					if (EP_GetPixel(x, i) == BLACK) {
+						EP_SetPixel(x, i, YELLOW);
+					}
+				}
+				EP_RenderFlush();
+#endif
+				lind = ind;
+
+				Layer& input = nets.input;
+				Layer& output = nets.output;
+				MultiLinkList<Layer>& hiddens = nets.hiddens;
+				Layer* hidden;
+				Neural * neural;
+				NeuralGate *pgate, *lpgate;
+				EFTYPE divoutrange = nets.divoutrange;
+				EFTYPE divrange = nets.divrange;
+				
+				//reset gate to t=0
+				//input
+				input.resetGate();
+				//output
+				output.resetGate();
+				//hidden
+				hidden = hiddens.link;
+				if (hidden) {
+					do {
+						hidden->resetGate();
+
+						hidden = hiddens.next(hidden);
+					} while (hidden && hidden != hiddens.link);
+				}
+				int i, j, k;
+				//for each serial_size
+				for (int p = 0; p < serial_size; p++) {
+					//put input
+					input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
+					//put output
+					output.setNeuralSerial((double*)((double*)Y + ind * out_size * serial_size), serial_size, p);
+
+					input.setScale(1.0 / divrange);
+					output.setScale(1.0 / divoutrange);
+
+					//forawrd transfer
+					//input
+					input.getOutput();
+					//hidden
+					hidden = hiddens.link;
+					if (hidden) {
+						do {
+							hidden->getOutput();
+
+							hidden = hiddens.next(hidden);
+						} while (hidden && hidden != hiddens.link);
+					}
+					//output
+					output.getOutput();
+
+					//move forawrd t+1
+					//input
+					input.nextGate();
+					//output
+					output.nextGate();
+					//hidden
+					hidden = hiddens.link;
+					if (hidden) {
+						do {
+							hidden->nextGate();
+
+							hidden = hiddens.next(hidden);
+						} while (hidden && hidden != hiddens.link);
+					}
+				}
+				printf("\n");
+				int out = 0;
+				for (int i = 0; i < in_size; i++) {
+					int in = 0;
+					for (int p = serial_size - 1; p >= 0; p--) {
+						double value = *(double*)((double*)X + ind * in_size * serial_size + i * serial_size + p);
+						printf("%.2f ", value);
+						in += value * pow(2, p);
+					}
+					printf("\t%d\n", in);
+					out += in;
+				}
+				printf("\t\t\t\t%d\n", out);
+				for (int i = 0; i < out_size; i++) {
+					int in = 0;
+					for (int p = serial_size - 1; p >= 0; p--) {
+						double value = *(double*)((double*)Y + ind * out_size * serial_size + i * serial_size + p);
+						printf("%.2f ", value);
+						in += value * pow(2, p);
+					}
+					printf("\t%d\n", in);
+				}
+				//put input
+				out = 0;
+				neural = input.neurals.link;
+				if (neural) {
+					do {
+						//for each serial
+						int in = 0;
+						int p = serial_size - 1;
+						lpgate = neural->gates.prev(neural->gates.link);
+						pgate = lpgate;
+						if (pgate) {
+							do {
+								double value = pgate->out;
+								printf("%.2f ", value);
+								in += value * pow(2, p);
+								p--;
+
+								pgate = neural->gates.prev(pgate);
+							} while (pgate && pgate != lpgate);
+						}
+						printf("\t%d\n", in);
+						out += in;
+
+						neural = input.neurals.next(neural);
+					} while (neural && neural != input.neurals.link);
+				}
+				printf("\t\t\t\t%d\n", out);
+				//put output
+				neural = output.neurals.link;
+				if (neural) {
+					do {
+						//for each serial
+						int in = 0;
+						int p = serial_size - 1;
+						lpgate = neural->gates.prev(neural->gates.link);
+						pgate = lpgate;
+						if (pgate) {
+							do {
+								double value = pgate->out;
+								printf("%.2f ", value);
+								in += value * pow(2, p);
+								p--;
+
+								pgate = neural->gates.prev(pgate);
+							} while (pgate && pgate != lpgate);
+						}
+						printf("\t%d\t%d\t%d\n", in, out, out - in);
+
+						neural = output.neurals.next(neural);
+					} while (neural && neural != output.neurals.link);
+				}
+
+				//put output
+				neural = output.neurals.link;
+				if (neural) {
+					do {
+						//for each serial
+						int in = 0;
+						int p = serial_size - 1;
+						lpgate = neural->gates.prev(neural->gates.link);
+						pgate = lpgate;
+						if (pgate) {
+							do {
+								double value = (int)(pgate->out + 0.5);
+								printf("%.2f ", value);
+								in += value * pow(2, p);
+								p--;
+
+								pgate = neural->gates.prev(pgate);
+							} while (pgate && pgate != lpgate);
+						}
+						printf("\t%d\t%d\t%d\n", in, out, out - in);
+
+						neural = output.neurals.next(neural);
+					} while (neural && neural != output.neurals.link);
+				}
+			}
+		}
 	}
 	delete[] X;
 	delete[] Y;
+
+	nets.releaseRNN();
 
 	return 0;
 }

@@ -435,8 +435,6 @@ public:
 		Connector *conn, *_conn;
 		NeuralGate *pgate, *lpgate;
 
-		this->prepareRNN(serial_size);
-
 		int *indice = new int[size];
 		int *indice_root = new int[sample_size];
 
@@ -708,7 +706,7 @@ public:
 						}
 				}
 
-				if (iter % 1000 == 0) {
+				if (0 && iter % 1000 == 0) {
 					printf("\n");
 					int out = 0;
 					for (int i = 0; i < in_size; i++) {
@@ -810,123 +808,131 @@ public:
 					//getchar();
 				}
 				error += e;
-				printf("[ %d/%d]Error is: %e\r", iter, count, error);
+				//printf("[ %d/%d]Error is: %e\r", iter, count, error);
+			}
 #ifdef _CNN_SHOW_LOSS_
-				if (count < count_div) {
-					show_error[count] = error;
-					if (max_error < error) {
-						max_error = error;
-					}
-					if (count > 1) {
-						EFTYPE width_r = (EFTYPE)count / show_width;
-						if (count - lcount >= width_r) {
-							lcount = count;
-							EFTYPE height_r = (EFTYPE)max_error / show_height;
-							EP_ClearDevice();
-							EP_SetColor(WHITE);
-							ege::setlinewidth(1);
-							for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
-								EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
-							}
+			if (count < count_div) {
+				show_error[count] = error;
+				if (max_error < error) {
+					max_error = error;
+				}
+				if (count > 1) {
+					EFTYPE width_r = (EFTYPE)count / show_width;
+					if (count - lcount >= width_r) {
+						lcount = count;
+						EFTYPE height_r = (EFTYPE)max_error / show_height;
+						EP_ClearDevice();
+						EP_SetColor(WHITE);
+						ege::setlinewidth(1);
+						for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
+							EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
+						}
 #endif
 #ifdef _CNN_SHOW_CURV_
-							int show_start = 1024;
-							int show_size = 100;
-							width_r = (EFTYPE)show_size / show_width;
-							height_r = (EFTYPE)pow(2, serial_size) / show_height;
-							//EP_ClearDevice();
-							int x, y, ex = 0, ey = 0, ex1 = 0, ey1 = 0;
-							for (int i = show_start; i < show_start + show_size; i++) {
-								int ind = i;
-								int result = 0;
-								int predict = 0;
-								//reset gate to t=0
+						int show_start = 1024;
+						int show_size = 100;
+						width_r = (EFTYPE)show_size / show_width;
+						height_r = (EFTYPE)pow(2, serial_size) / show_height;
+						//EP_ClearDevice();
+						int x, y, ex = 0, ey = 0, ex1 = 0, ey1 = 0;
+						for (int i = show_start; i < show_start + show_size; i++) {
+							int ind = i;
+							int result = 0;
+							int predict = 0;
+							//reset gate to t=0
+							//input
+							input.resetGate();
+							//output
+							output.resetGate();
+							//hidden
+							hidden = hiddens.link;
+							if (hidden) {
+								do {
+									hidden->resetGate();
+
+									hidden = hiddens.next(hidden);
+								} while (hidden && hidden != hiddens.link);
+							}
+							//for each serial_size
+							for (int p = 0; p < serial_size; p++) {
+								//put input
+								input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
+								//put output
+								output.setNeuralSerial((double*)((double*)Y + ind * out_size * serial_size), serial_size, p);
+
+								input.setScale(1.0 / divrange);
+								output.setScale(1.0 / divoutrange);
+
+								//forawrd transfer
 								//input
-								input.resetGate();
-								//output
-								output.resetGate();
+								input.getOutput();
 								//hidden
 								hidden = hiddens.link;
 								if (hidden) {
 									do {
-										hidden->resetGate();
+										hidden->getOutput();
 
 										hidden = hiddens.next(hidden);
 									} while (hidden && hidden != hiddens.link);
 								}
-								//for each serial_size
-								for (int p = 0; p < serial_size; p++) {
-									//put input
-									input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
-									//put output
-									output.setNeuralSerial((double*)((double*)Y + ind * out_size * serial_size), serial_size, p);
+								//output
+								output.getOutput();
 
-									input.setScale(1.0 / divrange);
-									output.setScale(1.0 / divoutrange);
+								//move forawrd t+1
+								//input
+								input.nextGate();
+								//output
+								output.nextGate();
+								//hidden
+								hidden = hiddens.link;
+								if (hidden) {
+									do {
+										hidden->nextGate();
 
-									//forawrd transfer
-									//input
-									input.getOutput();
-									//hidden
-									hidden = hiddens.link;
-									if (hidden) {
-										do {
-											hidden->getOutput();
-
-											hidden = hiddens.next(hidden);
-										} while (hidden && hidden != hiddens.link);
-									}
-									//output
-									output.getOutput();
-
-									//move forawrd t+1
-									//input
-									input.nextGate();
-									//output
-									output.nextGate();
-									//hidden
-									hidden = hiddens.link;
-									if (hidden) {
-										do {
-											hidden->nextGate();
-
-											hidden = hiddens.next(hidden);
-										} while (hidden && hidden != hiddens.link);
-									}
-
-									result += output.neurals.link->gate->in * pow(2, serial_size - 1 - p);
-									predict += ((int)(output.neurals.link->gate->out + 0.5)) * pow(2, serial_size - 1 - p);
+										hidden = hiddens.next(hidden);
+									} while (hidden && hidden != hiddens.link);
 								}
-								x = (i - show_start) / width_r;
-								y = result / height_r;
-								if (x <= show_width && y <= show_height) {
-									EP_SetColor(GREEN);
-									EP_Line(x, y, x, 0);
-									ex = x;
-									ey = y;
-								}
-								y = predict / height_r;
-								if (x <= show_width && y <= show_height) {
-									EP_SetColor(RED);
-									EP_Line(x, y, x, 0);
-									ex1 = x;
-									ey1 = y;
-								}
-								y = show_height - abs(result - predict) / height_r;
-								if (x <= show_width && y <= show_height) {
-									EP_SetColor(BLUE);
-									EP_Line(x, y, x, show_height);
-									ex1 = x;
-									ey1 = y;
-								}
+
+								result += output.neurals.link->gate->in * pow(2, serial_size - 1 - p);
+								predict += ((int)(output.neurals.link->gate->out + 0.5)) * pow(2, serial_size - 1 - p);
 							}
+							x = (i - show_start) / width_r;
+							y = result / height_r;
+							if (x <= show_width && y <= show_height) {
+								EP_SetColor(GREEN);
+								EP_Line(x, y, x, 0);
+								ex = x;
+								ey = y;
+							}
+							y = predict / height_r;
+							if (x <= show_width && y <= show_height) {
+								EP_SetColor(RED);
+								EP_Line(x, y, x, 0);
+								ex1 = x;
+								ey1 = y;
+							}
+							y = show_height - abs(result - predict) / height_r;
+							if (x <= show_width && y <= show_height) {
+								EP_SetColor(BLUE);
+								EP_Line(x, y, x, show_height);
+								ex1 = x;
+								ey1 = y;
+							}
+						}
 #endif
 #ifdef _CNN_SHOW_LOSS_
-							EP_RenderFlush();
-						}
+						EP_RenderFlush();
 					}
 				}
+			}
 #endif
+			if (kbhit_console()) {
+				getch_console();
+				printf("\n");
+				char c = getch_console();
+				if (c == 'q' || c == 'Q') {
+					break;
+				}
 			}
 
 			count++;
@@ -936,8 +942,8 @@ public:
 				break;
 			}
 		}
-
-		this->releaseRNN();
+		delete[] indice;
+		delete[] indice_root;
 	}
 
 	void TrainCNN(Sample* sample, int size, int train_size, int in_size, int out_size, double threshold) {

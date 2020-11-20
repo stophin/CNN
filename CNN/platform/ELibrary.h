@@ -30,6 +30,9 @@
 
 #include <graphics.h>
 
+int getch_console();
+int kbhit_console();
+
 
 struct EPointF {
 	FLOAT X;
@@ -192,6 +195,12 @@ int getch(void)
 	return ch;
 }
 
+int getch_console() {
+	return getch();
+}
+int kbhit_console() {
+	return kbhit();
+}
 #define INT		int
 #define VOID	void
 #define _TCHAR	char

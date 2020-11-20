@@ -505,7 +505,7 @@ public:
 
 						NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
 						gate.state = gate.forget_gate * prev_gate.state + gate.g_gate * gate.in_gate;
-						gate.h = gate.in_gate * tan_h(gate.state);
+						gate.h = gate.out_gate * tan_h(gate.state);
 					}
 				}
 				else {

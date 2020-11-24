@@ -1481,7 +1481,7 @@ void int2binary(double _n, double *arr, int binary_dim)
 int test_rnn() {
 	INT i, j, k;
 	
-	Network nets(LayerMode::RecursiveIn, LayerMode::RecursiveOut);
+	Network nets(LayerMode::GRUIn, LayerMode::GRUOut);
 
 	//inputs
 	nets.input.addNeural(1);
@@ -1491,7 +1491,7 @@ int test_rnn() {
 	nets.output.addNeural(1);
 	
 	int hidden_size = 26;
-	Layer * hidden = new Layer(LayerMode::Recursive);
+	Layer * hidden = new Layer(LayerMode::GRU);
 	for (i = 0; i < hidden_size; i++) {
 		hidden->addNeural(1 + i);
 	}

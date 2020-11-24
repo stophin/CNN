@@ -44,9 +44,12 @@ enum LayerMode {
 	MaxPool,
 	AvgPool,
 	Output,
-	Recursive,
-	RecursiveIn,
-	RecursiveOut
+	LSTM,
+	LSTMIn,
+	LSTMOut,
+	GRU,
+	GRUIn,
+	GRUOut
 };
 
 class Gate {
@@ -63,6 +66,14 @@ public:
 		W_G = WEIGHT;
 		U_G = WEIGHT;
 		W_out = WEIGHT;
+
+		W_Z = WEIGHT;
+		U_Z = WEIGHT;
+		W_R = WEIGHT;
+		U_R = WEIGHT;
+		W_H = WEIGHT;
+		U_H = WEIGHT;
+		W_y = WEIGHT;
 	}
 	double W_I;
 	double U_I;
@@ -73,6 +84,14 @@ public:
 	double W_G;
 	double U_G;
 	double W_out;
+
+	double W_Z;
+	double U_Z;
+	double W_R;
+	double U_R;
+	double W_H;
+	double U_H;
+	double W_y;
 };
 
 class NeuralGate {
@@ -99,6 +118,15 @@ public:
 		F_delta = 0;
 		G_delta = 0;
 		state_delta = 0;
+
+		z_gate = 0;
+		r_gate = 0;
+		h_gate = 0;
+		d_delta = 0;
+		r_delta = 0;
+		Z_delta = 0;
+		R_delta = 0;
+		H_delta = 0;
 	}
 
 	int t = 0;
@@ -118,6 +146,14 @@ public:
 	double in;
 	double out;
 
+	double z_gate;
+	double r_gate;
+	double h_gate;
+	double d_delta;
+	double r_delta;
+	double Z_delta;
+	double R_delta;
+	double H_delta;
 
 	// for multilinklist
 #define NeuralGate_Size 2

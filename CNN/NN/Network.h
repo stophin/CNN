@@ -621,11 +621,11 @@ public:
 															if (_neural) {
 																if (_neural->gate) {
 																	//get next gate
-																	NeuralGate& future_gate = *_neural->gates.next(_neural->gate);
-																	gate.h_delta += future_gate.I_delta * conn->gate.U_I;
-																	gate.h_delta += future_gate.F_delta * conn->gate.U_F;
-																	gate.h_delta += future_gate.O_delta * conn->gate.U_O;
-																	gate.h_delta += future_gate.G_delta * conn->gate.U_G;
+																	NeuralGate& _future_gate = *_neural->gates.next(_neural->gate);
+																	gate.h_delta += _future_gate.I_delta * conn->gate.U_I;
+																	gate.h_delta += _future_gate.F_delta * conn->gate.U_F;
+																	gate.h_delta += _future_gate.O_delta * conn->gate.U_O;
+																	gate.h_delta += _future_gate.G_delta * conn->gate.U_G;
 																}
 															}
 														}
@@ -695,7 +695,7 @@ public:
 												NeuralGate& gate = *neural->gate;
 												NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
 												NeuralGate& future_gate = *neural->gates.next(neural->gate);
-												gate.d_delta = future_gate.h_delta;
+												gate.h_delta = 0;
 												//from output
 												conn = neural->conn.link;
 												if (conn) {
@@ -705,7 +705,7 @@ public:
 															_neural = conn->forw;
 															if (_neural) {
 																if (_neural->gate) {
-																	gate.d_delta += _neural->gate->y_delta * conn->weight;
+																	gate.h_delta += _neural->gate->y_delta * conn->weight;
 																}
 															}
 														}
@@ -714,9 +714,7 @@ public:
 													} while (conn && conn != neural->conn.link);
 												}
 
-												gate.H_delta = gate.d_delta * (1 - gate.z_gate) * hidden->tan_h_1(gate.h_gate);
-												gate.Z_delta = gate.d_delta * (prev_gate.h - gate.h_gate) * hidden->sigmod_1(gate.z_gate);
-
+												gate.d_delta = 0;
 												gate.r_delta = 0;
 												//for hidden itself
 												conn = neural->rconn.link;
@@ -727,7 +725,13 @@ public:
 															_neural = conn->forw;
 															if (_neural) {
 																if (_neural->gate) {
-																	gate.r_delta += conn->gate.U_H * gate.H_delta;
+																	//get next gate
+																	NeuralGate& _future_gate = *_neural->gates.next(_neural->gate);
+																	NeuralGate& _prev_gate = *_neural->gates.prev(_neural->gate);
+																	gate.d_delta += _future_gate.Z_delta * conn->gate.U_Z;
+																	gate.d_delta += _future_gate.R_delta * conn->gate.U_R *conn->gate.U_H;
+																	gate.d_delta += _future_gate.H_delta * conn->gate.U_H * future_gate.r_gate;
+																	gate.r_delta += conn->gate.U_H * prev_gate.h;
 																}
 															}
 														}
@@ -735,29 +739,13 @@ public:
 														conn = neural->rconn.next(conn);
 													} while (conn && conn != neural->rconn.link);
 												}
-												gate.R_delta = gate.r_delta * prev_gate.h * hidden->sigmod_1(gate.r_gate);
+												gate.h_delta += future_gate.h_delta * (1 - future_gate.z_gate);
+												gate.h_delta += gate.d_delta;
 
-												gate.h_delta = 0;
-												//for hidden itself
-												conn = neural->rconn.link;
-												if (conn) {
-													do {
-														//for all neural that links after this neural
-														if (conn->back == neural) {
-															_neural = conn->forw;
-															if (_neural) {
-																if (_neural->gate) {
-																	gate.h_delta += conn->gate.U_Z * gate.Z_delta;
-																	gate.h_delta += conn->gate.U_R * gate.R_delta;
-																}
-															}
-														}
 
-														conn = neural->rconn.next(conn);
-													} while (conn && conn != neural->rconn.link);
-												}
-												gate.h_delta += gate.d_delta * gate.z_gate;
-												gate.h_delta += gate.r_delta * gate.r_gate;
+												gate.H_delta = gate.h_delta * gate.z_gate * hidden->tan_h_1(gate.h_gate);
+												gate.Z_delta = gate.h_delta * (-prev_gate.h + gate.h_gate) * hidden->sigmod_1(gate.z_gate);
+												gate.R_delta = gate.H_delta * gate.r_delta  * hidden->sigmod_1(gate.r_gate);
 
 												//adjust weight
 												//for hidden itself

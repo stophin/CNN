@@ -587,56 +587,55 @@ public:
 									neural = hidden->neurals.link;
 									if (neural) {
 										do {
-											pgate = neural->gate;
-											pgate->h_delta = 0;
-											//from output
-											conn = neural->conn.link;
-											if (conn) {
-												do {
-													//for all neural that links after this neural
-													if (conn->back == neural) {
-														_neural = conn->forw;
-														if (_neural) {
-															if (_neural->gate) {
-																pgate->h_delta += _neural->gate->y_delta * conn->weight;
-															}
-														}
-													}
-
-													conn = neural->conn.next(conn);
-												} while (conn && conn != neural->conn.link);
-											}
-
-											//for hidden itself
-											conn = neural->rconn.link;
-											if (conn) {
-												do {
-													//for all neural that links after this neural
-													if (conn->back == neural) {
-														_neural = conn->forw;
-														if (_neural) {
-															if (_neural->gate) {
-																//get next gate
-																NeuralGate& future_gate = *_neural->gates.next(_neural->gate);
-																pgate->h_delta += future_gate.I_delta * conn->gate.U_I;
-																pgate->h_delta += future_gate.F_delta * conn->gate.U_F;
-																pgate->h_delta += future_gate.O_delta * conn->gate.U_O;
-																pgate->h_delta += future_gate.G_delta * conn->gate.U_G;
-															}
-														}
-													}
-
-													conn = neural->rconn.next(conn);
-												} while (conn && conn != neural->rconn.link);
-											}
-
 											//accumulate delta
 											if (neural->gate) {
 												NeuralGate& gate = *neural->gate;
 												NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
 												NeuralGate& future_gate = *neural->gates.next(neural->gate);
-												gate.O_delta = pgate->h_delta * hidden->tan_h(gate.state) * hidden->sigmod_1(gate.out_gate);
-												gate.state_delta = pgate->h_delta * gate.out_gate * hidden->tan_h_1(hidden->tan_h(gate.state)) +
+												gate.h_delta = 0;
+												//from output
+												conn = neural->conn.link;
+												if (conn) {
+													do {
+														//for all neural that links after this neural
+														if (conn->back == neural) {
+															_neural = conn->forw;
+															if (_neural) {
+																if (_neural->gate) {
+																	gate.h_delta += _neural->gate->y_delta * conn->weight;
+																}
+															}
+														}
+
+														conn = neural->conn.next(conn);
+													} while (conn && conn != neural->conn.link);
+												}
+
+												//for hidden itself
+												conn = neural->rconn.link;
+												if (conn) {
+													do {
+														//for all neural that links after this neural
+														if (conn->back == neural) {
+															_neural = conn->forw;
+															if (_neural) {
+																if (_neural->gate) {
+																	//get next gate
+																	NeuralGate& future_gate = *_neural->gates.next(_neural->gate);
+																	gate.h_delta += future_gate.I_delta * conn->gate.U_I;
+																	gate.h_delta += future_gate.F_delta * conn->gate.U_F;
+																	gate.h_delta += future_gate.O_delta * conn->gate.U_O;
+																	gate.h_delta += future_gate.G_delta * conn->gate.U_G;
+																}
+															}
+														}
+
+														conn = neural->rconn.next(conn);
+													} while (conn && conn != neural->rconn.link);
+												}
+
+												gate.O_delta = gate.h_delta * hidden->tan_h(gate.state) * hidden->sigmod_1(gate.out_gate);
+												gate.state_delta = gate.h_delta * gate.out_gate * hidden->tan_h_1(hidden->tan_h(gate.state)) +
 													future_gate.state_delta * future_gate.forget_gate;
 												gate.F_delta = gate.state_delta * prev_gate.state * hidden->sigmod_1(gate.forget_gate);
 												gate.I_delta = gate.state_delta * gate.g_gate * hidden->sigmod_1(gate.in_gate);
@@ -690,77 +689,75 @@ public:
 									neural = hidden->neurals.link;
 									if (neural) {
 										do {
-											pgate = neural->gate;
-											NeuralGate& next_gate = *neural->gates.next(neural->gate);
-											pgate->d_delta = next_gate.h_delta;
-											//from output
-											conn = neural->conn.link;
-											if (conn) {
-												do {
-													//for all neural that links after this neural
-													if (conn->back == neural) {
-														_neural = conn->forw;
-														if (_neural) {
-															if (_neural->gate) {
-																pgate->d_delta += _neural->gate->y_delta * conn->weight;
-															}
-														}
-													}
-
-													conn = neural->conn.next(conn);
-												} while (conn && conn != neural->conn.link);
-											}
-
-											pgate->H_delta = pgate->d_delta * (1 - pgate->z_gate) * hidden->tan_h_1(pgate->h_gate);
-											pgate->Z_delta = pgate->d_delta * (pgate->h - pgate->h_gate) * hidden->sigmod_1(pgate->z_gate);
-
-											pgate->r_delta = 0;
-											//for hidden itself
-											conn = neural->rconn.link;
-											if (conn) {
-												do {
-													//for all neural that links after this neural
-													if (conn->back == neural) {
-														_neural = conn->forw;
-														if (_neural) {
-															if (_neural->gate) {
-																pgate->r_delta += conn->gate.U_H * pgate->H_delta;
-															}
-														}
-													}
-
-													conn = neural->rconn.next(conn);
-												} while (conn && conn != neural->rconn.link);
-											}
-											pgate->R_delta = pgate->r_delta * pgate->h * hidden->sigmod_1(pgate->r_gate);
-
-											pgate->h_delta = 0;
-											//for hidden itself
-											conn = neural->rconn.link;
-											if (conn) {
-												do {
-													//for all neural that links after this neural
-													if (conn->back == neural) {
-														_neural = conn->forw;
-														if (_neural) {
-															if (_neural->gate) {
-																pgate->h_delta += conn->gate.U_Z * pgate->Z_delta;
-																pgate->h_delta += conn->gate.U_R * pgate->R_delta;
-															}
-														}
-													}
-
-													conn = neural->rconn.next(conn);
-												} while (conn && conn != neural->rconn.link);
-											}
-											pgate->h_delta += pgate->d_delta * pgate->z_gate;
-											pgate->h_delta += pgate->r_delta * pgate->r_gate;
-
 											//accumulate delta
 											if (neural->gate) {
+
 												NeuralGate& gate = *neural->gate;
 												NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
 												NeuralGate& future_gate = *neural->gates.next(neural->gate);
+												gate.d_delta = future_gate.h_delta;
+												//from output
+												conn = neural->conn.link;
+												if (conn) {
+													do {
+														//for all neural that links after this neural
+														if (conn->back == neural) {
+															_neural = conn->forw;
+															if (_neural) {
+																if (_neural->gate) {
+																	gate.d_delta += _neural->gate->y_delta * conn->weight;
+																}
+															}
+														}
+
+														conn = neural->conn.next(conn);
+													} while (conn && conn != neural->conn.link);
+												}
+
+												gate.H_delta = gate.d_delta * (1 - gate.z_gate) * hidden->tan_h_1(gate.h_gate);
+												gate.Z_delta = gate.d_delta * (prev_gate.h - gate.h_gate) * hidden->sigmod_1(gate.z_gate);
+
+												gate.r_delta = 0;
+												//for hidden itself
+												conn = neural->rconn.link;
+												if (conn) {
+													do {
+														//for all neural that links after this neural
+														if (conn->back == neural) {
+															_neural = conn->forw;
+															if (_neural) {
+																if (_neural->gate) {
+																	gate.r_delta += conn->gate.U_H * gate.H_delta;
+																}
+															}
+														}
+
+														conn = neural->rconn.next(conn);
+													} while (conn && conn != neural->rconn.link);
+												}
+												gate.R_delta = gate.r_delta * prev_gate.h * hidden->sigmod_1(gate.r_gate);
+
+												gate.h_delta = 0;
+												//for hidden itself
+												conn = neural->rconn.link;
+												if (conn) {
+													do {
+														//for all neural that links after this neural
+														if (conn->back == neural) {
+															_neural = conn->forw;
+															if (_neural) {
+																if (_neural->gate) {
+																	gate.h_delta += conn->gate.U_Z * gate.Z_delta;
+																	gate.h_delta += conn->gate.U_R * gate.R_delta;
+																}
+															}
+														}
+
+														conn = neural->rconn.next(conn);
+													} while (conn && conn != neural->rconn.link);
+												}
+												gate.h_delta += gate.d_delta * gate.z_gate;
+												gate.h_delta += gate.r_delta * gate.r_gate;
 
 												//adjust weight
 												//for hidden itself
@@ -774,7 +771,7 @@ public:
 																if (_neural->gate) {
 																	conn->gate.U_Z += hidden->learning_rate * gate.Z_delta * prev_gate.h;
 																	conn->gate.U_R += hidden->learning_rate * gate.R_delta * prev_gate.h;
-																	conn->gate.U_H += hidden->learning_rate * gate.H_delta * (prev_gate.r_gate * prev_gate.h);
+																	conn->gate.U_H += hidden->learning_rate * gate.H_delta * (gate.r_gate * prev_gate.h);
 																}
 															}
 														}

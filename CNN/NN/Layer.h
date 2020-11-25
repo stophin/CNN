@@ -240,6 +240,7 @@ public:
 				neural->gate = neural->gates.link;
 				//skip empty gate
 				while (neural->gate->t < 0) {
+					neural->gate->reset();
 					neural->gate = neural->gates.next(neural->gate);
 				}
 
@@ -266,6 +267,7 @@ public:
 				neural->gate = neural->gates.prev(neural->gates.link);
 				//skip empty gate
 				while (neural->gate->t < 0) {
+					neural->gate->reset();
 					neural->gate = neural->gates.prev(neural->gate);
 				}
 

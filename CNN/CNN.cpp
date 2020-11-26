@@ -1481,7 +1481,7 @@ void int2binary(double _n, double *arr, int binary_dim)
 int test_rnn() {
 	INT i, j, k;
 	
-	Network nets(LayerMode::GRUIn, LayerMode::GRUOut);
+	Network nets(LayerMode::LSTMIn, LayerMode::LSTMOut);
 
 	//inputs
 	nets.input.addNeural(1);
@@ -1491,7 +1491,7 @@ int test_rnn() {
 	nets.output.addNeural(1);
 	
 	int hidden_size = 26;
-	Layer * hidden = new Layer(LayerMode::GRU);
+	Layer * hidden = new Layer(LayerMode::LSTM);
 	for (i = 0; i < hidden_size; i++) {
 		hidden->addNeural(1 + i);
 	}
@@ -1548,7 +1548,7 @@ int test_rnn() {
 	while (1) {
 		count++;
 
-		nets.setLearningRate(0.1);
+		nets.setLearningRate(0.03);
 
 		for (i = 0; i < sample_size_real; i++) {
 			X[i * in_size * serial_size + 0 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);

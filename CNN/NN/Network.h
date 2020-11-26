@@ -692,10 +692,11 @@ public:
 											//accumulate delta
 											if (neural->gate) {
 
+
 												NeuralGate& gate = *neural->gate;
 												NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
 												NeuralGate& future_gate = *neural->gates.next(neural->gate);
-												gate.h_delta = 0;
+												gate.d_delta = future_gate.h_delta;
 												//from output
 												conn = neural->conn.link;
 												if (conn) {
@@ -705,7 +706,7 @@ public:
 															_neural = conn->forw;
 															if (_neural) {
 																if (_neural->gate) {
-																	gate.h_delta += _neural->gate->y_delta * conn->weight;
+																	gate.d_delta += _neural->gate->y_delta * conn->weight;
 																}
 															}
 														}
@@ -714,7 +715,9 @@ public:
 													} while (conn && conn != neural->conn.link);
 												}
 
-												gate.d_delta = 0;
+												gate.H_delta = gate.d_delta * gate.z_gate * hidden->tan_h_1(gate.h_gate);
+												gate.Z_delta = gate.d_delta * ( - prev_gate.h + gate.h_gate) * hidden->sigmod_1(gate.z_gate);
+
 												gate.r_delta = 0;
 												//for hidden itself
 												conn = neural->rconn.link;
@@ -725,13 +728,7 @@ public:
 															_neural = conn->forw;
 															if (_neural) {
 																if (_neural->gate) {
-																	//get next gate
-																	NeuralGate& _future_gate = *_neural->gates.next(_neural->gate);
-																	NeuralGate& _prev_gate = *_neural->gates.prev(_neural->gate);
-																	gate.d_delta += _future_gate.Z_delta * conn->gate.U_Z;
-																	gate.d_delta += _future_gate.R_delta * conn->gate.U_R *conn->gate.U_H;
-																	gate.d_delta += _future_gate.H_delta * conn->gate.U_H * future_gate.r_gate;
-																	gate.r_delta += conn->gate.U_H * prev_gate.h;
+																	gate.r_delta += conn->gate.U_H * gate.H_delta;
 																}
 															}
 														}
@@ -739,13 +736,29 @@ public:
 														conn = neural->rconn.next(conn);
 													} while (conn && conn != neural->rconn.link);
 												}
-												gate.h_delta += future_gate.h_delta * (1 - future_gate.z_gate);
-												gate.h_delta += gate.d_delta;
+												gate.R_delta = gate.r_delta * prev_gate.h * hidden->sigmod_1(gate.r_gate);
 
+												gate.h_delta = 0;
+												//for hidden itself
+												conn = neural->rconn.link;
+												if (conn) {
+													do {
+														//for all neural that links after this neural
+														if (conn->back == neural) {
+															_neural = conn->forw;
+															if (_neural) {
+																if (_neural->gate) {
+																	gate.h_delta += conn->gate.U_Z * gate.Z_delta;
+																	gate.h_delta += conn->gate.U_R * gate.R_delta;
+																}
+															}
+														}
 
-												gate.H_delta = gate.h_delta * gate.z_gate * hidden->tan_h_1(gate.h_gate);
-												gate.Z_delta = gate.h_delta * (-prev_gate.h + gate.h_gate) * hidden->sigmod_1(gate.z_gate);
-												gate.R_delta = gate.H_delta * gate.r_delta  * hidden->sigmod_1(gate.r_gate);
+														conn = neural->rconn.next(conn);
+													} while (conn && conn != neural->rconn.link);
+												}
+												gate.h_delta += gate.d_delta * (1 - gate.z_gate);
+												gate.h_delta += gate.r_delta * prev_gate.h  * gate.r_gate;
 
 												//adjust weight
 												//for hidden itself
@@ -983,6 +996,9 @@ public:
 								//output
 								output.getOutput();
 
+								result += output.neurals.link->gate->in * pow(2, p);
+								predict += ((int)(output.neurals.link->gate->out + 0.5)) * pow(2, p);
+
 								//move forawrd t+1
 								//input
 								input.nextGate();
@@ -997,9 +1013,6 @@ public:
 										hidden = hiddens.next(hidden);
 									} while (hidden && hidden != hiddens.link);
 								}
-
-								result += output.neurals.link->gate->in * pow(2, serial_size - 1 - p);
-								predict += ((int)(output.neurals.link->gate->out + 0.5)) * pow(2, serial_size - 1 - p);
 							}
 							x = (i - show_start) / width_r;
 							y = result / height_r;

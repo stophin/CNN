@@ -594,7 +594,6 @@ public:
 						gate.r_gate = sigmod(rGate);
 						gate.h_gate = tan_h(hGate + hGate_r * gate.r_gate);
 
-						//gate.h = gate.z_gate * prev_gate.h + (1 - gate.z_gate) * gate.h_gate;
 						gate.h = (1 - gate.z_gate) * prev_gate.h + gate.z_gate* gate.h_gate;
 					}
 				}

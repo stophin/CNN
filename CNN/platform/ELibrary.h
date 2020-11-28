@@ -10,6 +10,10 @@
 #define _ELIBRARY_H_
 
 
+#ifdef _NANO_MINGW_
+#define _NANOC_WINDOWS_
+#endif
+
 #ifndef _NANO_LINUX_
 #define _NANOC_WINDOWS_
 #endif
@@ -112,6 +116,16 @@ typedef HANDLE HANDLE_MUTEX;
 #define __NANOC_THREAD_MUTEX_LOCK__(hMutex) WaitForSingleObject(hMutex, INFINITE)
 #define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) ReleaseSemaphore(hMutex, 1, NULL);
 #endif
+
+#ifdef _NANO_MINGW_
+#define fopen_s(fp, filename, mode) *fp = fopen(filename, mode)
+#undef scanf
+#undef getch
+#undef kbhit
+#define max MAX
+#define min MIN
+#endif
+
 #else 
 
 #include <stdlib.h>

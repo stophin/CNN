@@ -212,8 +212,10 @@ EFTYPE train_sample(EFTYPE x, EFTYPE y, EFTYPE z) {
 	//return 0;
 }
 #ifdef _NANOC_WINDOWS_
+#ifndef _NANO_MINGW_
 #include <float.h>
 unsigned int fp_control_state = _controlfp_s(&fp_control_state, _EM_INEXACT, _MCW_EM);
+#endif
 #endif
 
 
@@ -293,7 +295,7 @@ int test() {
 
 	nets.Traverse();
 
-	getch();
+	getch_console();
 
 	//test input
 	Layer input;
@@ -337,7 +339,7 @@ int test() {
 
 		//nets.Traverse();
 
-		if (kbhit()) 
+		if (kbhit_console()) 
 		{
 			printf("Training: %d\n", i);
 			while (1) {
@@ -443,7 +445,7 @@ int test0() {
 
 	nets.Traverse();
 
-	getch();
+	getch_console();
 
 	//test input
 	Layer input;
@@ -487,7 +489,7 @@ int test0() {
 
 		//nets.Traverse();
 
-		if (kbhit()) 
+		if (kbhit_console())
 		{
 			printf("Training: %d\n", i);
 			while (1) {
@@ -779,6 +781,7 @@ int test1() {
 	output.addNeural(1);
 
 	//data
+#ifdef _NANO_LINEAR1_
 	EFTYPE X[][2] = {
 		{0, 0},
 		{0, 1},
@@ -807,7 +810,7 @@ int test1() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy); 
 
-		/*
+#else
 	EFTYPE X[][2] = {
 		{0.356649128, 0.030306376},
 		{0.105260929, 0.876207066},
@@ -861,7 +864,8 @@ int test1() {
 	INT out_size = 1;
 	EFTYPE divx = 1.0;
 	EFTYPE divy = 1.0;
-	nets.Scale(divx, divy);*/
+	nets.Scale(divx, divy);
+#endif
 
 	clock_t start, end;
 	int count = 0;
@@ -1441,7 +1445,7 @@ int test_sample() {
 	//send end singal
 	param.tid = -1;
 	__NANOC_THREAD_MUTEX_LOCK__(param.main_mutex);
-	__NANOC_THREAD_CLOSE__(param.thread, GUIThread, &param);
+	__NANOC_THREAD_CLOSE__(param.thread);
 	delete[] draw;
 #endif
 	// ÊÍ·Å×ÊÔ´
@@ -1481,7 +1485,13 @@ void int2binary(double _n, double *arr, int binary_dim)
 int test_rnn() {
 	INT i, j, k;
 	
+#ifdef _NANO_LSTM_
 	Network nets(LayerMode::LSTMIn, LayerMode::LSTMOut);
+	Layer * hidden = new Layer(LayerMode::LSTM);
+#else
+	Network nets(LayerMode::GRUIn, LayerMode::GRUOut);
+	Layer * hidden = new Layer(LayerMode::GRU);
+#endif
 
 	//inputs
 	nets.input.addNeural(1);
@@ -1491,7 +1501,6 @@ int test_rnn() {
 	nets.output.addNeural(1);
 	
 	int hidden_size = 26;
-	Layer * hidden = new Layer(LayerMode::LSTM);
 	for (i = 0; i < hidden_size; i++) {
 		hidden->addNeural(1 + i);
 	}
@@ -1782,8 +1791,12 @@ int main(int argc, _TCHAR* argv[])
 	EP_Init(show_width, show_height);
 #endif
 	while (1) {
-		//test1();
-		//test_sample();
+#if defined(_NANO_LSTM_) || defined(_NANO_GRU_)
 		test_rnn();
+#elif defined(_NANO_CNN_)
+		test_sample();
+#else
+		test1();
+#endif
 	}
 }

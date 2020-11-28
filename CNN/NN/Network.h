@@ -942,7 +942,7 @@ public:
 						EP_ClearDevice();
 						EP_SetColor(WHITE);
 						ege::setlinewidth(1);
-						for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
+						for (int i = 1; i < count; i += (width_r > 1.0 ? width_r : 1)) {
 							EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
 						}
 #endif
@@ -953,7 +953,7 @@ public:
 						height_r = (EFTYPE)pow(2, serial_size) / show_height;
 						//EP_ClearDevice();
 						int x, y, ex = 0, ey = 0, ex1 = 0, ey1 = 0;
-						for (int i = show_start; i < show_start + show_size; i++) {
+						for (int i = show_start; i < show_start + show_size; i += (width_r > 1.0 ? width_r : 1)) {
 							int ind = i;
 							int result = 0;
 							int predict = 0;
@@ -1465,7 +1465,7 @@ public:
 						EP_ClearDevice();
 						EP_SetColor(WHITE);
 						ege::setlinewidth(1);
-						for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
+						for (int i = 1; i < count; i += (width_r > 1.0 ? width_r : 1)) {
 							EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
 						}
 #endif
@@ -1474,11 +1474,12 @@ public:
 						height_r = (EFTYPE)this->divoutrange / show_height;
 						//EP_ClearDevice();
 						int x, y, ex = 0, ey = 0, ex1 = 0, ey1 = 0;
-						for (int i = 1; i < sample_size; i++) {
+						for (int i = 1; i < sample_size; i+=(width_r > 1.0 ? width_r : 1)) {
 							input.setNeural((double*)((double*)X + i * in_size), in_size);
+							output.setNeural((double*)((double*)Y + i * out_size), out_size);
 							Forecast(input, &output);
 							x = i / width_r;
-							y = *((double*)((double*)Y + i * out_size)) / height_r;
+							y = output.neurals.link->value / height_r;
 							if (x <= show_width && y <= show_height) {
 								EP_SetColor(GREEN);
 								EP_Line(x, y, ex, ey);
@@ -1911,7 +1912,7 @@ public:
 								EP_ClearDevice();
 								EFTYPE width_r = (EFTYPE)neural->map_w / show_width;
 								EFTYPE height_r = (EFTYPE)neural->map_h / show_height;
-								for (int i = 0; i < show_width; i++) {
+								for (int i = 0; i < show_width; i+= (width_r > 1.0 ? width_r : 1)) {
 									for (int j = 0; j < show_height; j++) {
 										int ind = (int)((INT)(j * height_r)* neural->map_h + (INT)(i * width_r));
 										double v = 0;
@@ -1970,7 +1971,7 @@ public:
 					EFTYPE height_r = (EFTYPE)max_error / show_height;
 					EP_SetColor(WHITE);
 					ege::setlinewidth(1);
-					for (int i = 1; i < count; width_r > 1 ? i += (int)width_r : i++) {
+					for (int i = 1; i < count; i += (width_r > 1.0 ? width_r : 1)) {
 						EP_Line(i / width_r, show_error[i] / height_r, (i - 1) / width_r, show_error[i - 1] / height_r);
 					}
 					EP_RenderFlush();

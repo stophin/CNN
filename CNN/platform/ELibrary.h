@@ -124,6 +124,8 @@ typedef HANDLE HANDLE_MUTEX;
 #undef kbhit
 #define max MAX
 #define min MIN
+#define INT_MIN     (-2147483647 - 1) // minimum (signed) int value
+#define INT_MAX       2147483647    // maximum (signed) int value
 #endif
 
 #else 

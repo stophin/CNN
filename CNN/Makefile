@@ -12,6 +12,8 @@ linux_line1:
 	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_LINEAR1_ -o CNN CNN.cpp NN/mt19937ar.cpp -lpthread
 linux_line2:
 	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_LINEAR2_ -o CNN CNN.cpp NN/mt19937ar.cpp -lpthread
+linux_line:
+	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_LINEAR_ -o CNN CNN.cpp NN/mt19937ar.cpp -lpthread
 	
 gru:
 	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_GRU_ -o CNN.exe ${SRC_FILE} ${LIB_FILE}
@@ -23,6 +25,8 @@ line1:
 	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_LINEAR1_ -o CNN.exe ${SRC_FILE} ${LIB_FILE}
 line2:
 	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_LINEAR2_ -o CNN.exe ${SRC_FILE} ${LIB_FILE}
+line:
+	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_LINEAR_ -o CNN.exe ${SRC_FILE} ${LIB_FILE}
 	
 clean:
 	rm ./CNN.exe

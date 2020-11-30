@@ -112,10 +112,15 @@ void read_mnist_label(Sample *sample, const char *file_name)
 }
 //*-------------------------------------------------------------------------------------------------------/
 
-
+EFTYPE train_sample_input_min() {
+	return 0.1;
+}
+EFTYPE train_sample_input_max() {
+	return 2.5;
+}
 EFTYPE train_sample_output(EFTYPE x) {
 	EFTYPE res = 0;
-	res = pow(x, 2 / 3) + 0.9 * pow(6.3l - x * x, 1 / 2) * sin(12 * PI * (x));
+	res = pow(x, 2.0 / 3.0) + 0.9 * pow(6.3l - x * x, 1.0 / 2.0) * sin(40 *  (x));
 	//res = sin(10 * x);
 	return res;
 }
@@ -224,8 +229,8 @@ int test_d11() {
 	EFTYPE temp[] = { 1, 5, 2, 10 };
 
 	//get scale range to limit input/ouptput to 0~1
-	EFTYPE range_min =0.1;
-	EFTYPE range_max = 1.5;
+	EFTYPE range_min =train_sample_input_min();
+	EFTYPE range_max = train_sample_input_max();
 	EFTYPE outrange_min = train_sample_output_min(range_min, range_max, 0.01);
 	EFTYPE outrange_max = train_sample_output_max(range_min, range_max, 0.01);
 	EFTYPE divrange = ((EFTYPE)(range_max - range_min)) / MAX_SIMULATION_RANGE_INPUT;

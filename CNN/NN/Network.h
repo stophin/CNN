@@ -1051,6 +1051,13 @@ public:
 				if (c == 'q' || c == 'Q') {
 					break;
 				}
+				if (c == 's' || c == 'S') {
+#ifdef _NANO_LSTM_
+					this->Save("LSTM.txt");
+#else
+					this->Save("GRU.txt");
+#endif
+				}
 			}
 
 			count++;
@@ -1501,6 +1508,25 @@ public:
 				}
 			}
 #endif
+			if (kbhit_console()) {
+				getch_console();
+				printf("\n");
+				char c = getch_console();
+				if (c == 'q' || c == 'Q') {
+					break;
+				}
+				if (c == 's' || c == 'S') {
+#ifdef _NANO_LINEAR1_
+					this->Save("LINE1.txt");
+#endif
+#ifdef _NANO_LINEAR2_
+					this->Save("LINE2.txt");
+#endif
+#ifdef _NANO_LINEAR_
+					this->Save("LINE.txt");
+#endif
+				}
+			}
 
 			printf("[ %d]Error is: %e\r", count, error);
 			count++;
@@ -1938,6 +1964,9 @@ public:
 								if (c == 'q' || c == 'Q') {
 									break;
 								}
+								if (c == 's' || c == 'S') {
+									this->Save("CNN.txt");
+								}
 
 								neural = layer->neurals.next(neural);
 							} while (neural && neural != layer->neurals.link);
@@ -1978,6 +2007,14 @@ public:
 				}
 			}
 #endif
+			if (kbhit_console()) {
+				getch_console();
+				printf("\n");
+				c = getch_console();
+				if (c == 'q' || c == 'Q') {
+					break;
+				}
+			}
 
 			printf("[ %d]Error is: %e\n", count, error);
 			count++;
@@ -2174,6 +2211,406 @@ public:
 				neural = this->input.neurals.next(neural);
 			} while (neural && neural != this->input.neurals.link);
 		}
+	}
+
+	void Save(const char * filename) {
+		FILE *fp = NULL;
+		fopen_s(&fp, filename, "w");
+		if (!fp) {
+			printf("File not exist: %s\n", filename);
+			return;
+		}
+		printf("Write out %s\n", filename);
+		Neural * neural, *_neural;
+		Connector * conn, *rconn;
+		Layer* layer = this->layers.link;
+		if (layer) {
+			do {
+				fprintf(fp, "layer\t%d\t%d\n", layer->mode, layer->neurals.linkcount);
+
+				neural = layer->neurals.link;
+				if (neural) {
+					do {
+
+						fprintf(fp, "\tneural\t%d\t%e\t%d\t%d\t%d\t%e\n", neural->uniqueID, neural->bias, neural->map_w, neural->map_h, neural->map_count, neural->map.b);
+
+						fprintf(fp, "\t\tconn\t%d\n", neural->conn.linkcount);
+						conn = neural->conn.link;
+						if (conn) {
+							do {
+
+								if (conn->back == neural) {
+									_neural = conn->forw;
+									if (_neural) {
+										fprintf(fp, "\t\t\tneural\t%d\n", _neural->uniqueID);
+										fprintf(fp, "\t\t\t\tweight\t%e\n", conn->weight);
+										fprintf(fp, "\t\t\t\tkernel\t%d\t%d", conn->kernel_w, conn->kernel_h);
+										for (int i = 0; i < conn->kernel_w; i++) {
+											fprintf(fp, "\n\t\t\t\t\tkernel\t");
+											for (int j = 0; j < conn->kernel_h; j++) {
+												fprintf(fp, "%e\t", conn->kernel.W[i * conn->kernel_h + j]);
+											}
+										}
+										fprintf(fp, "\n");
+									}
+								}
+
+								conn = neural->conn.next(conn);
+							} while (conn && conn != neural->conn.link);
+						}
+
+						fprintf(fp, "\t\trconn\t%d\n", neural->rconn.linkcount);
+						rconn = neural->rconn.link;
+						if (rconn) {
+							do {
+
+								if (rconn->back == neural) {
+									_neural = rconn->forw;
+									if (_neural) {
+										fprintf(fp, "\t\t\t\tgate\t%d\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\n",
+											_neural->uniqueID,
+											rconn->gate.W_I, rconn->gate.U_I, rconn->gate.W_F, rconn->gate.U_F,
+											rconn->gate.W_O, rconn->gate.U_O, rconn->gate.W_G, rconn->gate.U_G,
+											rconn->gate.W_Z, rconn->gate.U_Z, rconn->gate.W_R, rconn->gate.U_R,
+											rconn->gate.W_H, rconn->gate.U_H);
+									}
+								}
+								rconn = neural->rconn.next(rconn);
+							} while (rconn && rconn != neural->rconn.link);
+						}
+
+						neural = layer->neurals.next(neural);
+					} while (neural && neural != layer->neurals.link);
+				}
+
+				layer = this->layers.next(layer);
+			} while (layer && layer != this->layers.link);
+		}
+		fclose(fp);
+	}
+
+#define MAX_STR 1024
+#define MAX_PAR	20
+	INT parseParameter(CHAR buffer[], CHAR command[], CHAR parameters[][MAX_STR], INT maxP = MAX_PAR)
+	{
+		int i, j;
+		int cp = 0;
+		int pp = 0;
+		int pc = 0;
+		int flag = 0;
+		int lspc = 0;
+		for (i = 0; buffer[i] != '\0' && (buffer[i] == '\t' || buffer[i] == ' '); i++);
+		for (j = i; buffer[j] != '\0'; j++)
+		{
+			if (buffer[j] == '\n')
+			{
+				buffer[j] = '\0';
+				break;
+			}
+		}
+		for (; buffer[i] != '\0'; i++)
+		{
+			if (buffer[i] == '\t' || buffer[i] == ' ')
+			{
+				if (lspc == 0)
+				{
+					if (flag)
+					{
+						parameters[pc][pp] = '\0';
+						pc++;
+						if (maxP && pc >= maxP - 1) {
+							break;
+						}
+						pp = 0;
+					}
+					else
+					{
+						command[cp] = '\0';
+						flag = 1;
+					}
+				}
+				lspc++;
+				continue;
+			}
+			else
+			{
+				lspc = 0;
+			}
+			if (flag)
+			{
+				parameters[pc][pp++] = buffer[i];
+				if (pp >= MAX_STR)
+				{
+					break;
+				}
+			}
+			else
+			{
+				command[cp++] = buffer[i];
+				if (cp >= MAX_STR)
+				{
+					break;
+				}
+			}
+		}
+		if (flag)
+		{
+			parameters[pc][pp] = '\0';
+		}
+		else
+		{
+			command[cp] = '\0';
+			pc = pc - 1;
+		}
+		return pc + 1;
+	}
+	void Load(const char * filename) {
+		FILE *rfp = NULL;
+		fopen_s(&rfp, filename, "r");
+		if (!rfp) {
+			printf("File not exist: %s\n", filename);
+			return;
+		}
+		printf("Read from %s\n", filename);
+		CHAR buffer[MAX_STR];
+		CHAR command[MAX_STR];
+		CHAR attrs[MAX_PAR][MAX_STR];
+		int paramCount;
+		sprintf_s(buffer, "test_%s", filename);
+		FILE *fp = NULL;
+		fopen_s(&fp, buffer, "w");
+		if (!fp) {
+			printf("File not exist: %s\n", filename);
+			return;
+		}
+
+#define LOAD_DEBUG
+
+		Neural * neural, *_neural;
+		Connector * conn, *rconn;
+		Layer* layer = this->layers.link;
+		int uniqueID, _uniqueID;
+		int linkcount;
+		if (layer) {
+			do {
+				fgets(buffer, MAX_STR, rfp);
+				paramCount = parseParameter(buffer, command, attrs);
+
+#ifdef LOAD_DEBUG
+				fprintf(fp, "layer\t%d\t%d\n", layer->mode, layer->neurals.linkcount);
+#endif
+
+				for (int i = 0; i < layer->neurals.linkcount; i++) {
+					uniqueID = -1;
+					do {
+						fgets(buffer, MAX_STR, rfp);
+						paramCount = parseParameter(buffer, command, attrs);
+						if (paramCount >= 1) {
+							uniqueID = atoi(attrs[0]);
+						}
+					} while (uniqueID == -1);
+
+					neural = layer->neurals.getLink(uniqueID);
+					if (neural) {
+						if (paramCount >= 6) {
+							neural->bias = atof(attrs[1]);
+							neural->map_w = atoi(attrs[2]);
+							neural->map_h = atoi(attrs[3]);
+							neural->map_count = atoi(attrs[4]);
+							neural->map.b = atof(attrs[5]);
+						}
+#ifdef LOAD_DEBUG
+						fprintf(fp, "\tneural\t%d\t%e\t%d\t%d\t%d\t%e\n", neural->uniqueID, neural->bias, neural->map_w, neural->map_h, neural->map_count, neural->map.b);
+#endif
+
+						fgets(buffer, MAX_STR, rfp);
+						paramCount = parseParameter(buffer, command, attrs);
+#ifdef LOAD_DEBUG
+						fprintf(fp, "\t\tconn\t%d\n", neural->conn.linkcount);
+#endif
+
+						linkcount = 0;
+						conn = neural->conn.link;
+						if (conn) {
+							do {
+
+								if (conn->back == neural) {
+									_neural = conn->forw;
+									if (_neural) {
+										linkcount++;
+									}
+								}
+
+								conn = neural->conn.next(conn);
+							} while (conn && conn != neural->conn.link);
+						}
+
+						for (int j = 0; j < linkcount; j++) {
+							_uniqueID = -1;
+							do {
+								fgets(buffer, MAX_STR, rfp);
+								paramCount = parseParameter(buffer, command, attrs);
+								if (paramCount >= 1) {
+									_uniqueID = atoi(attrs[0]);
+								}
+							} while (_uniqueID == -1);
+
+							_neural = NULL;
+							conn = neural->conn.link;
+							if (conn) {
+								do {
+
+									if (conn->back == neural) {
+										_neural = conn->forw;
+										if (_neural) {
+											if (_neural->uniqueID == _uniqueID) {
+												break;
+											}
+										}
+									}
+
+									conn = neural->conn.next(conn);
+								} while (conn && conn != neural->conn.link);
+							}
+							if (_neural && conn) {
+
+								if (conn->back == neural) {
+									_neural = conn->forw;
+									if (_neural) {
+#ifdef LOAD_DEBUG
+										fprintf(fp, "\t\t\tneural\t%d\n", _neural->uniqueID);
+#endif
+										fgets(buffer, MAX_STR, rfp);
+										paramCount = parseParameter(buffer, command, attrs);
+										if (paramCount >= 1) {
+											conn->weight = atof(attrs[0]);
+										}
+#ifdef LOAD_DEBUG
+										fprintf(fp, "\t\t\t\tweight\t%e\n", conn->weight);
+#endif
+										fgets(buffer, MAX_STR, rfp);
+										paramCount = parseParameter(buffer, command, attrs);
+										if (paramCount >= 2) {
+											conn->kernel_w = atoi(attrs[0]);
+											conn->kernel_h = atoi(attrs[1]);
+										}
+#ifdef LOAD_DEBUG
+										fprintf(fp, "\t\t\t\tkernel\t%d\t%d", conn->kernel_w, conn->kernel_h);
+#endif
+										for (int i = 0; i < conn->kernel_w; i++) {
+#ifdef LOAD_DEBUG
+											fprintf(fp, "\n\t\t\t\t\tkernel\t");
+#endif
+											fgets(buffer, MAX_STR, rfp);
+											paramCount = parseParameter(buffer, command, attrs);
+											if (paramCount >= conn->kernel_h) {
+												for (int j = 0; j < conn->kernel_h; j++) {
+													conn->kernel.W[i * conn->kernel_h + j] = atof(attrs[j]);
+#ifdef LOAD_DEBUG
+													fprintf(fp, "%e\t", conn->kernel.W[i * conn->kernel_h + j]);
+#endif
+												}
+											}
+										}
+#ifdef LOAD_DEBUG
+										fprintf(fp, "\n");
+#endif
+									}
+								}
+							}
+						}
+
+						fgets(buffer, MAX_STR, rfp);
+						paramCount = parseParameter(buffer, command, attrs);
+#ifdef LOAD_DEBUG
+						fprintf(fp, "\t\trconn\t%d\n", neural->rconn.linkcount);
+#endif
+
+						linkcount = 0;
+						rconn = neural->rconn.link;
+						if (rconn) {
+							do {
+
+								if (rconn->back == neural) {
+									_neural = rconn->forw;
+									if (_neural) {
+										linkcount++;
+									}
+								}
+
+								rconn = neural->rconn.next(rconn);
+							} while (rconn && rconn != neural->rconn.link);
+						}
+
+						for (int j = 0; j < linkcount; j++) {
+							_uniqueID = -1;
+							do {
+								fgets(buffer, MAX_STR, rfp);
+								paramCount = parseParameter(buffer, command, attrs);
+								if (paramCount >= 1) {
+									_uniqueID = atoi(attrs[0]);
+								}
+							} while (_uniqueID == -1);
+
+
+							_neural = NULL;
+							rconn = neural->rconn.link;
+							if (rconn) {
+								do {
+
+									if (rconn->back == neural) {
+										_neural = rconn->forw;
+										if (_neural) {
+											if (_neural->uniqueID == _uniqueID) {
+												break;
+											}
+										}
+									}
+
+									rconn = neural->rconn.next(rconn);
+								} while (rconn && rconn != neural->rconn.link);
+							}
+							if (_neural && rconn) {
+
+								if (rconn->back == neural) {
+									_neural = rconn->forw;
+									if (_neural) {
+										if (paramCount >= 15) {
+											rconn->gate.W_I = atof(attrs[1]);
+											rconn->gate.U_I = atof(attrs[2]);
+											rconn->gate.W_F = atof(attrs[3]);
+											rconn->gate.U_F = atof(attrs[4]);
+											rconn->gate.W_O = atof(attrs[5]);
+											rconn->gate.U_O = atof(attrs[6]);
+											rconn->gate.W_G = atof(attrs[7]);
+											rconn->gate.U_G = atof(attrs[8]);
+											rconn->gate.W_Z = atof(attrs[9]);
+											rconn->gate.U_Z = atof(attrs[10]);
+											rconn->gate.W_R = atof(attrs[11]);
+											rconn->gate.U_R = atof(attrs[12]);
+											rconn->gate.W_H = atof(attrs[13]);
+											rconn->gate.U_H = atof(attrs[14]);
+										}
+#ifdef LOAD_DEBUG
+										fprintf(fp, "\t\t\t\tgate\t%d\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\n",
+											_neural->uniqueID,
+											rconn->gate.W_I, rconn->gate.U_I, rconn->gate.W_F, rconn->gate.U_F,
+											rconn->gate.W_O, rconn->gate.U_O, rconn->gate.W_G, rconn->gate.U_G,
+											rconn->gate.W_Z, rconn->gate.U_Z, rconn->gate.W_R, rconn->gate.U_R,
+											rconn->gate.W_H, rconn->gate.U_H);
+#endif
+									}
+								}
+							}
+						}
+					}
+				}
+
+				layer = this->layers.next(layer);
+			} while (layer && layer != this->layers.link);
+		}
+		fclose(rfp);
+		fclose(fp);
 	}
 };
 

@@ -119,6 +119,7 @@ typedef HANDLE HANDLE_MUTEX;
 
 #ifdef _NANO_MINGW_
 #define fopen_s(fp, filename, mode) *fp = fopen(filename, mode)
+#define sprintf_s sprintf
 #undef scanf
 #undef getch
 #undef kbhit
@@ -225,6 +226,7 @@ int kbhit_console() {
 #define max(x, y) (x > y ? x : y)
 
 #define fopen_s(fp, filename, mode) *fp = fopen(filename, mode)
+#define sprintf_s sprintf
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>

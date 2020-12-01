@@ -218,6 +218,8 @@ int test_d11() {
 
 	nets.Traverse();
 
+	nets.Load("LINE.txt");
+
 	//getch_console();
 
 	//test input
@@ -446,6 +448,13 @@ int test_d21() {
 	}
 
 	nets.Traverse();
+
+#ifdef _NANO_LINEAR1_
+	nets.Load("LINE1.txt");
+#endif
+#ifdef _NANO_LINEAR2_
+	nets.Load("LINE2.txt");
+#endif
 
 	//getch();
 
@@ -876,6 +885,8 @@ int test_sample() {
 
 	nets.Traverse();
 
+	nets.Load("CNN.txt");
+
 	//getch();
 
 	//test input
@@ -1210,6 +1221,12 @@ int test_rnn() {
 	}
 
 	nets.Traverse();
+
+#ifdef _NANO_LSTM_
+	nets.Load("LSTM.txt");
+#else
+	nets.Load("GRU.txt");
+#endif
 
 	INT sample_size = 1000;
 	INT sample_size_real = 11000;

@@ -407,28 +407,36 @@ public:
 								if (this->mode == LayerMode::Normal) {
 									t += conn->weight * _neural->output;
 								}
-								else if (this->mode == LayerMode::LSTMOut) {
-									if (_neural->gate) {
-										NeuralGate& gate = *_neural->gate;
-										t += conn->weight * gate.h;
+								else if (IS_RNN(this->mode)) {
+									if (this->mode == LayerMode::LSTMIn) {
+										t += conn->weight * _neural->output;
 									}
-								}
-								else if (this->mode == LayerMode::LSTM) {
-									inGate += _neural->output * conn->gate.W_I;
-									outGate += _neural->output * conn->gate.W_O;
-									forgetGate += _neural->output * conn->gate.W_F;
-									gGate += _neural->output * conn->gate.W_G;
-								}
-								else if (this->mode == LayerMode::GRUOut) {
-									if (_neural->gate) {
-										NeuralGate& gate = *_neural->gate;
-										t += conn->weight * gate.h;
+									else if (this->mode == LayerMode::LSTMOut) {
+										if (_neural->gate) {
+											NeuralGate& gate = *_neural->gate;
+											t += conn->weight * gate.h;
+										}
 									}
-								}
-								else if (this->mode == LayerMode::GRU) {
-									zGate += _neural->output * conn->gate.W_Z;
-									rGate += _neural->output * conn->gate.W_R;
-									hGate += _neural->output * conn->gate.W_H;
+									else if (this->mode == LayerMode::LSTM) {
+										inGate += _neural->output * conn->gate.W_I;
+										outGate += _neural->output * conn->gate.W_O;
+										forgetGate += _neural->output * conn->gate.W_F;
+										gGate += _neural->output * conn->gate.W_G;
+									}
+									if (this->mode == LayerMode::GRUIn) {
+										t += conn->weight * _neural->output;
+									}
+									else if (this->mode == LayerMode::GRUOut) {
+										if (_neural->gate) {
+											NeuralGate& gate = *_neural->gate;
+											t += conn->weight * gate.h;
+										}
+									}
+									else if (this->mode == LayerMode::GRU) {
+										zGate += _neural->output * conn->gate.W_Z;
+										rGate += _neural->output * conn->gate.W_R;
+										hGate += _neural->output * conn->gate.W_H;
+									}
 								}
 								else {
 									if (mode == LayerMode::Conv) {
@@ -490,111 +498,148 @@ public:
 					}
 					neural->output = t;
 				}
-				else if (this->mode == LayerMode::LSTMIn ||
-					this->mode == LayerMode::LSTMOut) {
-					if (c > 0) {
-						//formula:
-						//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
-						//OUTPUT(i) = F(NET(i))
-						//bias
-						//t += neural->bias;
-						neural->sum = t;
-						t = sigmod(t);
+				else if (IS_RNN(this->mode)) {
+					if (this->mode == LayerMode::LSTMIn) {
+						if (c > 0) {
+							//formula:
+							//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+							//OUTPUT(i) = F(NET(i))
+							//bias
+							t += neural->bias;
+							neural->sum = t;
+							t = eva_fun(t);
+						}
+						else {
+							//input layer
+							t = neural->value;
+						}
+						neural->output = t;
+						if (neural->gate) {
+							neural->gate->out = neural->output;
+						}
+					} else if (this->mode == LayerMode::LSTMOut) {
+						if (c > 0) {
+							//formula:
+							//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+							//OUTPUT(i) = F(NET(i))
+							//bias
+							//t += neural->bias;
+							neural->sum = t;
+							t = sigmod(t);
+						}
+						else {
+							//input layer
+							t = neural->value;
+						}
+						neural->output = t;
+						if (neural->gate) {
+							neural->gate->out = neural->output;
+						}
 					}
-					else {
-						//input layer
-						t = neural->value;
-					}
-					neural->output = t;
-					if (neural->gate) {
-						neural->gate->out = neural->output;
-					}
-				}
-				else if (this->mode == LayerMode::LSTM) {
-					//accumulate
-					if (neural->gate) {
-						NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
-						//for hidden itself
-						conn = neural->rconn.link;
-						if (conn) {
-							do {
-								//for all neural that links after this neural
-								if (conn->back == neural) {
-									Neural *_neural = conn->forw;
-									if (_neural) {
-										if (_neural->gate) {
-											inGate += prev_gate.h * conn->gate.U_I;
-											outGate += prev_gate.h * conn->gate.U_O;
-											forgetGate += prev_gate.h * conn->gate.U_F;
-											gGate += prev_gate.h * conn->gate.U_G;
+					else if (this->mode == LayerMode::LSTM) {
+						//accumulate
+						if (neural->gate) {
+							NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+							//for hidden itself
+							conn = neural->rconn.link;
+							if (conn) {
+								do {
+									//for all neural that links after this neural
+									if (conn->back == neural) {
+										Neural *_neural = conn->forw;
+										if (_neural) {
+											if (_neural->gate) {
+												inGate += prev_gate.h * conn->gate.U_I;
+												outGate += prev_gate.h * conn->gate.U_O;
+												forgetGate += prev_gate.h * conn->gate.U_F;
+												gGate += prev_gate.h * conn->gate.U_G;
+											}
 										}
 									}
-								}
 
-								conn = neural->rconn.next(conn);
-							} while (conn && conn != neural->rconn.link);
+									conn = neural->rconn.next(conn);
+								} while (conn && conn != neural->rconn.link);
+							}
+
+							NeuralGate& gate = *neural->gate;
+							gate.in_gate = sigmod(inGate);
+							gate.out_gate = sigmod(outGate);
+							gate.forget_gate = sigmod(forgetGate);
+							gate.g_gate = sigmod(gGate);
+
+							gate.state = gate.forget_gate * prev_gate.state + gate.g_gate * gate.in_gate;
+							gate.h = gate.out_gate * tan_h(gate.state);
 						}
-
-						NeuralGate& gate = *neural->gate;
-						gate.in_gate = sigmod(inGate);
-						gate.out_gate = sigmod(outGate);
-						gate.forget_gate = sigmod(forgetGate);
-						gate.g_gate = sigmod(gGate);
-
-						gate.state = gate.forget_gate * prev_gate.state + gate.g_gate * gate.in_gate;
-						gate.h = gate.out_gate * tan_h(gate.state);
 					}
-				}
-				else if (this->mode == LayerMode::GRUIn ||
-					this->mode == LayerMode::GRUOut) {
-					if (c > 0) {
-						//formula:
-						//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
-						//OUTPUT(i) = F(NET(i))
-						//bias
-						//t += neural->bias;
-						neural->sum = t;
-						t = sigmod(t);
+					else if (this->mode == LayerMode::GRUIn) {
+						if (c > 0) {
+							//formula:
+							//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+							//OUTPUT(i) = F(NET(i))
+							//bias
+							t += neural->bias;
+							neural->sum = t;
+							t = eva_fun(t);
+						}
+						else {
+							//input layer
+							t = neural->value;
+						}
+						neural->output = t;
+						if (neural->gate) {
+							neural->gate->out = neural->output;
+						}
 					}
-					else {
-						//input layer
-						t = neural->value;
+					else if (this->mode == LayerMode::GRUOut) {
+						if (c > 0) {
+							//formula:
+							//S(i) = SUM[j=0~m-1](w(ij)x(j)) - BIAS[i]
+							//OUTPUT(i) = F(NET(i))
+							//bias
+							//t += neural->bias;
+							neural->sum = t;
+							t = sigmod(t);
+						}
+						else {
+							//input layer
+							t = neural->value;
+						}
+						neural->output = t;
+						if (neural->gate) {
+							neural->gate->out = neural->output;
+						}
 					}
-					neural->output = t;
-					if (neural->gate) {
-						neural->gate->out = neural->output;
-					}
-				}
-				else if (this->mode == LayerMode::GRU) {
-					//accumulate
-					if (neural->gate) {
-						NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
-						//for hidden itself
-						conn = neural->rconn.link;
-						if (conn) {
-							do {
-								//for all neural that links after this neural
-								if (conn->back == neural) {
-									Neural *_neural = conn->forw;
-									if (_neural) {
-										if (_neural->gate) {
-											zGate += prev_gate.h * conn->gate.U_Z;
-											rGate += prev_gate.h * conn->gate.U_R;
-											hGate_r += prev_gate.h * conn->gate.U_H;
+					else if (this->mode == LayerMode::GRU) {
+						//accumulate
+						if (neural->gate) {
+							NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+							//for hidden itself
+							conn = neural->rconn.link;
+							if (conn) {
+								do {
+									//for all neural that links after this neural
+									if (conn->back == neural) {
+										Neural *_neural = conn->forw;
+										if (_neural) {
+											if (_neural->gate) {
+												zGate += prev_gate.h * conn->gate.U_Z;
+												rGate += prev_gate.h * conn->gate.U_R;
+												hGate_r += prev_gate.h * conn->gate.U_H;
+											}
 										}
 									}
-								}
 
-								conn = neural->rconn.next(conn);
-							} while (conn && conn != neural->rconn.link);
+									conn = neural->rconn.next(conn);
+								} while (conn && conn != neural->rconn.link);
+							}
+
+							NeuralGate& gate = *neural->gate;
+							gate.z_gate = sigmod(zGate);
+							gate.r_gate = sigmod(rGate);
+							gate.h_gate = tan_h(hGate + hGate_r * gate.r_gate);
+
+							gate.h = (1 - gate.z_gate) * prev_gate.h + gate.z_gate* gate.h_gate;
 						}
-
-						NeuralGate& gate = *neural->gate;
-						gate.z_gate = sigmod(zGate);
-						gate.r_gate = sigmod(rGate);
-						gate.h_gate = tan_h(hGate + hGate_r * gate.r_gate);
-
-						gate.h = (1 - gate.z_gate) * prev_gate.h + gate.z_gate* gate.h_gate;
 					}
 				}
 				else {
@@ -652,6 +697,8 @@ public:
 							if (_neural) {
 								if (this->mode == LayerMode::Normal) {
 									t += conn->weight * _neural->delta;
+								}
+								else if (IS_RNN(this->mode)) {
 								}
 								else {
 									if (mode == LayerMode::Conv) {
@@ -722,6 +769,18 @@ public:
 					}
 					neural->delta = t;
 				}
+				else if (IS_RNN(this->mode)) {
+					if (mode == LayerMode::LSTMOut) {
+						if (neural->gate) {
+							neural->gate->y_delta = (neural->value - neural->output) * sigmod_1(neural->output);
+						}
+					}
+					else if (mode == LayerMode::GRUOut) {
+						if (neural->gate) {
+							neural->gate->y_delta = (neural->value - neural->output) * sigmod_1(neural->output);
+						}
+					}
+				}
 				else {
 					if (c > 0) {
 						if (mode == LayerMode::Conv) {
@@ -771,18 +830,12 @@ public:
 					}
 				}
 				else if (mode == LayerMode::LSTMOut) {
-					if (neural->gate) {
-						neural->gate->y_delta = (neural->value - neural->output) * sigmod_1(neural->output);
-						cur = fabs(neural->value - neural->output);
-						ans += cur;
-					}
+					cur = fabs(neural->value - neural->output);
+					ans += cur;
 				}
 				else if (mode == LayerMode::GRUOut) {
-					if (neural->gate) {
-						neural->gate->y_delta = (neural->value - neural->output) * sigmod_1(neural->output);
-						cur = fabs(neural->value - neural->output);
-						ans += cur;
-					}
+					cur = fabs(neural->value - neural->output);
+					ans += cur;
 				}
 				else {
 					cur = 0.5 * (neural->map.data[0] - neural->map.label[0]) * (neural->map.data[0] - neural->map.label[0]) / this->neurals.linkcount;
@@ -821,6 +874,9 @@ public:
 								if (mode == LayerMode::Normal) {
 									conn->deltaSum = 0;
 								}
+								else if (IS_RNN(mode)) {
+
+								}
 								else {
 									k_size = conn->kernel_w * conn->kernel_h;
 									memset(conn->kernel.dW, 0, k_size * sizeof(double));
@@ -833,6 +889,9 @@ public:
 				}
 				if (mode == LayerMode::Normal) {
 					neural->biasSum = 0;
+				}
+				else if (IS_RNN(mode)) {
+
 				}
 				else {
 					neural->map.db = 0;
@@ -850,6 +909,9 @@ public:
 
 				if (mode == LayerMode::Normal) {
 					neural->biasSum = 0;
+				}
+				else if (IS_RNN(mode)) {
+
 				}
 				else {
 					neural->map.db = 0;
@@ -890,6 +952,9 @@ public:
 								if (this->mode == LayerMode::Normal) {
 									conn->deltaSum += neural->output * _neural->delta;
 								}
+								else if (IS_RNN(this->mode)) {
+
+								}
 								else {
 									if (mode == LayerMode::Conv) {
 										convn_valid(neural->map.data, neural->map_w, neural->map_h,
@@ -918,6 +983,9 @@ public:
 				}
 				if (this->mode == LayerMode::Normal) {
 					neural->biasSum += neural->delta;
+				}
+				else if (IS_RNN(this->mode)) {
+
 				}
 				else {
 					if (c > 0) {
@@ -1001,13 +1069,18 @@ public:
 	}
 	void updateWeightWithDeltaSum(int size) {
 		Neural *neural = this->neurals.link;
-		Connector * conn;
+		Connector * conn, *_conn, *__conn;
+		Neural * _neural, *__neural;
+		Layer * hidden = this;
 		if (neural) {
 			do {
 
 				INT k_size = 0;
 				double lambda = 0.0;
 				if (mode == LayerMode::Normal) {
+				}
+				else if (IS_RNN(mode)) {
+
 				}
 				else {
 				}
@@ -1020,6 +1093,245 @@ public:
 							if (_neural) {
 								if (mode == LayerMode::Normal) {
 									conn->weight -= learning_rate * conn->deltaSum / size;//TODO
+								}
+								else if (IS_RNN(mode)) {
+									if (mode == LayerMode::LSTM) {
+										NeuralGate* pgate = _neural->gate;
+										_neural = neural;
+										if (_neural->gate) {
+											NeuralGate& gate = *_neural->gate;
+											conn->weight += hidden->learning_rate * pgate->y_delta * gate.h;
+										}
+									}
+									if (mode == LayerMode::GRU) {
+										NeuralGate* pgate = _neural->gate;
+										_neural = neural;
+										if (_neural->gate) {
+											NeuralGate& gate = *_neural->gate;
+											conn->weight += hidden->learning_rate * pgate->y_delta * gate.h;
+										}
+									}
+									else if (mode == LayerMode::LSTMIn) {
+										__neural = neural;
+										neural = conn->forw;
+										__conn = conn;
+
+
+										//accumulate delta
+										if (neural->gate) {
+											NeuralGate& gate = *neural->gate;
+											NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+											NeuralGate& future_gate = *neural->gates.next(neural->gate);
+											gate.h_delta = 0;
+											//from output
+											conn = neural->conn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																gate.h_delta += _neural->gate->y_delta * conn->weight;
+															}
+														}
+													}
+
+													conn = neural->conn.next(conn);
+												} while (conn && conn != neural->conn.link);
+											}
+
+											//for hidden itself
+											conn = neural->rconn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																//get next gate
+																NeuralGate& _future_gate = *_neural->gates.next(_neural->gate);
+																gate.h_delta += _future_gate.I_delta * conn->gate.U_I;
+																gate.h_delta += _future_gate.F_delta * conn->gate.U_F;
+																gate.h_delta += _future_gate.O_delta * conn->gate.U_O;
+																gate.h_delta += _future_gate.G_delta * conn->gate.U_G;
+															}
+														}
+													}
+
+													conn = neural->rconn.next(conn);
+												} while (conn && conn != neural->rconn.link);
+											}
+
+											gate.O_delta = gate.h_delta * hidden->tan_h(gate.state) * hidden->sigmod_1(gate.out_gate);
+											gate.state_delta = gate.h_delta * gate.out_gate * hidden->tan_h_1(hidden->tan_h(gate.state)) +
+												future_gate.state_delta * future_gate.forget_gate;
+											gate.F_delta = gate.state_delta * prev_gate.state * hidden->sigmod_1(gate.forget_gate);
+											gate.I_delta = gate.state_delta * gate.g_gate * hidden->sigmod_1(gate.in_gate);
+											gate.G_delta = gate.state_delta * gate.in_gate * hidden->sigmod_1(gate.g_gate);
+
+											//adjust weight
+											//for hidden itself
+											conn = neural->rconn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																conn->gate.U_I += hidden->learning_rate * gate.I_delta * prev_gate.h;
+																conn->gate.U_F += hidden->learning_rate * gate.F_delta * prev_gate.h;
+																conn->gate.U_O += hidden->learning_rate * gate.O_delta * prev_gate.h;
+																conn->gate.U_G += hidden->learning_rate * gate.G_delta * prev_gate.h;
+															}
+														}
+													}
+
+													conn = neural->rconn.next(conn);
+												} while (conn && conn != neural->rconn.link);
+											}
+											//for input
+											conn = neural->conn.link;
+											if (conn) {
+												do {
+													//for all neural that links before this neural
+													if (conn->forw == neural) {
+														_neural = conn->back;
+														if (_neural) {
+															conn->gate.W_I += hidden->learning_rate * gate.I_delta * _neural->gate->out;
+															conn->gate.W_F += hidden->learning_rate * gate.F_delta * _neural->gate->out;
+															conn->gate.W_O += hidden->learning_rate * gate.O_delta * _neural->gate->out;
+															conn->gate.W_G += hidden->learning_rate * gate.G_delta * _neural->gate->out;
+														}
+													}
+
+													conn = neural->conn.next(conn);
+												} while (conn && conn != neural->conn.link);
+											}
+										}
+
+										conn = __conn;
+										neural = __neural;
+									}
+									else if (mode == LayerMode::GRUIn) {
+										__neural = neural;
+										neural = conn->forw;
+										__conn = conn;
+
+										//accumulate delta
+										if (neural->gate) {
+
+
+											NeuralGate& gate = *neural->gate;
+											NeuralGate& prev_gate = *neural->gates.prev(neural->gate);
+											NeuralGate& future_gate = *neural->gates.next(neural->gate);
+											gate.d_delta = future_gate.h_delta;
+											//from output
+											conn = neural->conn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																gate.d_delta += _neural->gate->y_delta * conn->weight;
+															}
+														}
+													}
+
+													conn = neural->conn.next(conn);
+												} while (conn && conn != neural->conn.link);
+											}
+
+											gate.H_delta = gate.d_delta * gate.z_gate * hidden->tan_h_1(gate.h_gate);
+											gate.Z_delta = gate.d_delta * (-prev_gate.h + gate.h_gate) * hidden->sigmod_1(gate.z_gate);
+
+											gate.r_delta = 0;
+											//for hidden itself
+											conn = neural->rconn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																gate.r_delta += conn->gate.U_H * gate.H_delta;
+															}
+														}
+													}
+
+													conn = neural->rconn.next(conn);
+												} while (conn && conn != neural->rconn.link);
+											}
+											gate.R_delta = gate.r_delta * prev_gate.h * hidden->sigmod_1(gate.r_gate);
+
+											gate.h_delta = 0;
+											//for hidden itself
+											conn = neural->rconn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																gate.h_delta += conn->gate.U_Z * gate.Z_delta;
+																gate.h_delta += conn->gate.U_R * gate.R_delta;
+															}
+														}
+													}
+
+													conn = neural->rconn.next(conn);
+												} while (conn && conn != neural->rconn.link);
+											}
+											gate.h_delta += gate.d_delta * (1 - gate.z_gate);
+											gate.h_delta += gate.r_delta * prev_gate.h  * gate.r_gate;
+
+											//adjust weight
+											//for hidden itself
+											conn = neural->rconn.link;
+											if (conn) {
+												do {
+													//for all neural that links after this neural
+													if (conn->back == neural) {
+														_neural = conn->forw;
+														if (_neural) {
+															if (_neural->gate) {
+																conn->gate.U_Z += hidden->learning_rate * gate.Z_delta * prev_gate.h;
+																conn->gate.U_R += hidden->learning_rate * gate.R_delta * prev_gate.h;
+																conn->gate.U_H += hidden->learning_rate * gate.H_delta * (gate.r_gate * prev_gate.h);
+															}
+														}
+													}
+
+													conn = neural->rconn.next(conn);
+												} while (conn && conn != neural->rconn.link);
+											}
+											//for input
+											conn = neural->conn.link;
+											if (conn) {
+												do {
+													//for all neural that links before this neural
+													if (conn->forw == neural) {
+														_neural = conn->back;
+														if (_neural) {
+															conn->gate.W_Z += hidden->learning_rate * gate.Z_delta * _neural->gate->out;
+															conn->gate.W_R += hidden->learning_rate * gate.R_delta * _neural->gate->out;
+															conn->gate.W_H += hidden->learning_rate * gate.H_delta * _neural->gate->out;
+														}
+													}
+
+													conn = neural->conn.next(conn);
+												} while (conn && conn != neural->conn.link);
+											}
+										}
+										neural = __neural;
+										conn = __conn;
+									}
 								}
 								else {
 									k_size = conn->kernel_w * conn->kernel_h;
@@ -1035,6 +1347,9 @@ public:
 				}
 				if (mode == LayerMode::Normal) {
 					neural->bias -= learning_rate * neural->biasSum / size;
+				}
+				else if (IS_RNN(mode)) {
+
 				}
 				else {
 					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, learning_rate, lambda);
@@ -1053,6 +1368,9 @@ public:
 
 				if (mode == LayerMode::Normal) {
 					neural->bias -= learning_rate * neural->biasSum / size;
+				}
+				else if (IS_RNN(mode)) {
+
 				}
 				else {
 					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, learning_rate, lambda);

@@ -52,6 +52,8 @@ enum LayerMode {
 	GRUOut
 };
 
+#define IS_RNN(x) (x >= LayerMode::LSTM && x <= LayerMode::GRUOut)
+
 class Gate {
 public:
 	Gate() {}

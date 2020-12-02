@@ -2010,6 +2010,9 @@ public:
 			if (kbhit_console()) {
 				getch_console();
 				printf("\n");
+#ifdef _NANO_LINUX_
+				char c;
+#endif
 				c = getch_console();
 				if (c == 'q' || c == 'Q') {
 					break;
@@ -2252,6 +2255,12 @@ public:
 											}
 										}
 										fprintf(fp, "\n");
+										fprintf(fp, "\t\t\t\tgate\t%d\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\n",
+											_neural->uniqueID,
+											conn->gate.W_I, conn->gate.U_I, conn->gate.W_F, conn->gate.U_F,
+											conn->gate.W_O, conn->gate.U_O, conn->gate.W_G, conn->gate.U_G,
+											conn->gate.W_Z, conn->gate.U_Z, conn->gate.W_R, conn->gate.U_R,
+											conn->gate.W_H, conn->gate.U_H);
 									}
 								}
 
@@ -2514,6 +2523,32 @@ public:
 										}
 #ifdef LOAD_DEBUG
 										fprintf(fp, "\n");
+#endif
+										fgets(buffer, MAX_STR, rfp);
+										paramCount = parseParameter(buffer, command, attrs);
+										if (paramCount >= 15) {
+											conn->gate.W_I = atof(attrs[1]);
+											conn->gate.U_I = atof(attrs[2]);
+											conn->gate.W_F = atof(attrs[3]);
+											conn->gate.U_F = atof(attrs[4]);
+											conn->gate.W_O = atof(attrs[5]);
+											conn->gate.U_O = atof(attrs[6]);
+											conn->gate.W_G = atof(attrs[7]);
+											conn->gate.U_G = atof(attrs[8]);
+											conn->gate.W_Z = atof(attrs[9]);
+											conn->gate.U_Z = atof(attrs[10]);
+											conn->gate.W_R = atof(attrs[11]);
+											conn->gate.U_R = atof(attrs[12]);
+											conn->gate.W_H = atof(attrs[13]);
+											conn->gate.U_H = atof(attrs[14]);
+										}
+#ifdef LOAD_DEBUG
+										fprintf(fp, "\t\t\t\tgate\t%d\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\n",
+											_neural->uniqueID,
+											conn->gate.W_I, conn->gate.U_I, conn->gate.W_F, conn->gate.U_F,
+											conn->gate.W_O, conn->gate.U_O, conn->gate.W_G, conn->gate.U_G,
+											conn->gate.W_Z, conn->gate.U_Z, conn->gate.W_R, conn->gate.U_R,
+											conn->gate.W_H, conn->gate.U_H);
 #endif
 									}
 								}

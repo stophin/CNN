@@ -224,6 +224,9 @@ int kbhit_console() {
 
 #define min(x, y) (x > y ? y : x)
 #define max(x, y) (x > y ? x : y)
+#define CHAR char
+#define INT_MIN     (-2147483647 - 1) // minimum (signed) int value
+#define INT_MAX       2147483647    // maximum (signed) int value
 
 #define fopen_s(fp, filename, mode) *fp = fopen(filename, mode)
 #define sprintf_s sprintf

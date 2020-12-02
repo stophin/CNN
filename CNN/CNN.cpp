@@ -1122,9 +1122,6 @@ int test_sample() {
 				printf("result: %d  predict: %d\n", result, predict);
 				printf("total error: %lf\n", e);
 			}
-			if (ind < 0) {
-				break;
-			}
 		}
 	}
 #ifdef _CNN_SHOW_GUI_

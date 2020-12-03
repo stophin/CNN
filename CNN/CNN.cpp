@@ -1234,8 +1234,9 @@ int test_rnn() {
 	nets.Scale(divx, divy);
 
 	INT serial_size = 8;
+	INT class_size = 8;
 	double * X = new double[sample_size_real * in_size * serial_size];
-	double * Y = new double[sample_size_real * out_size * serial_size];
+	double * Y = new double[sample_size_real * out_size * class_size];
 
 	int largest_number = pow(2, serial_size);
 
@@ -1252,17 +1253,17 @@ int test_rnn() {
 		for (i = 0; i < sample_size_real; i++) {
 			X[i * in_size * serial_size + 0 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
 			X[i * in_size * serial_size + 1 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
-			Y[i * out_size * serial_size + 0 * serial_size + 0] = X[i * in_size * serial_size + 0 * serial_size + 0] + X[i * in_size * serial_size + 1 * serial_size + 0];
+			Y[i * out_size * class_size + 0 * class_size + 0] = X[i * in_size * serial_size + 0 * serial_size + 0] + X[i * in_size * serial_size + 1 * serial_size + 0];
 			if (i < 10) {
 				printf("%.2f %.2f %.2f\n", X[i * in_size * serial_size + 0 * serial_size + 0], X[i * in_size * serial_size + 1 * serial_size + 0], Y[i * out_size * serial_size + 0 * serial_size + 0]);
 			}
 			int2binary(X[i * in_size * serial_size + 0 * serial_size + 0], &X[i * in_size * serial_size + 0 * serial_size + 0], serial_size);
 			int2binary(X[i * in_size * serial_size + 1 * serial_size + 0], &X[i * in_size * serial_size + 1 * serial_size + 0], serial_size);
-			int2binary(Y[i * out_size * serial_size + 0 * serial_size + 0], &Y[i * out_size * serial_size + 0 * serial_size + 0], serial_size);
+			int2binary(Y[i * out_size * class_size + 0 * class_size + 0], &Y[i * out_size * class_size + 0 * class_size + 0], class_size);
 		}
 
 		start = clock();
-		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 1e1, serial_size, sample_size_real, 10000);
+		nets.TrainRNN((double**)X, (double**)Y, sample_size, in_size, out_size, 1e1, serial_size, class_size, sample_size_real, 10000);
 		end = clock();
 		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
 
@@ -1332,7 +1333,11 @@ int test_rnn() {
 					//put input
 					input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
 					//put output
-					output.setNeuralSerial((double*)((double*)Y + ind * out_size * serial_size), serial_size, p);
+					int p_ind = p - (serial_size - class_size);
+					if (p_ind < 0) {
+						p_ind = 0;
+					}
+					output.setNeuralSerial((double*)((double*)Y + ind * out_size * class_size), class_size, p_ind);
 
 					input.setScale(1.0 / divrange);
 					output.setScale(1.0 / divoutrange);
@@ -1382,8 +1387,8 @@ int test_rnn() {
 				printf("\t\t\t\t%d\n", out);
 				for (int i = 0; i < out_size; i++) {
 					int in = 0;
-					for (int p = serial_size - 1; p >= 0; p--) {
-						double value = *(double*)((double*)Y + ind * out_size * serial_size + i * serial_size + p);
+					for (int p = class_size - 1; p >= 0; p--) {
+						double value = *(double*)((double*)Y + ind * out_size * class_size + i * class_size + p);
 						printf("%.2f ", value);
 						in += value * pow(2, p);
 					}
@@ -1422,7 +1427,7 @@ int test_rnn() {
 					do {
 						//for each serial
 						int in = 0;
-						int p = serial_size - 1;
+						int p = class_size - 1;
 						lpgate = neural->gates.prev(neural->gates.link);
 						pgate = lpgate;
 						if (pgate) {
@@ -1447,7 +1452,7 @@ int test_rnn() {
 					do {
 						//for each serial
 						int in = 0;
-						int p = serial_size - 1;
+						int p = class_size - 1;
 						lpgate = neural->gates.prev(neural->gates.link);
 						pgate = lpgate;
 						if (pgate) {

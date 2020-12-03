@@ -427,7 +427,7 @@ public:
 			} while (hidden && hidden != hiddens.link);
 		}
 	}
-	void TrainRNN(double **X, double **Y, int size, int in_size, int out_size, double threshold, int serial_size, int sample_size, int train_count) {
+	void TrainRNN(double **X, double **Y, int size, int in_size, int out_size, double threshold, int serial_size, int class_size, int sample_size, int train_count) {
 		EFTYPE error;
 		Layer * layer;
 		Layer *hidden, *_hidden;
@@ -506,7 +506,11 @@ public:
 					//put input
 					input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
 					//put output
-					output.setNeuralSerial((double*)((double*)Y + ind * out_size * serial_size), serial_size, p);
+					int p_ind = p - (serial_size - class_size);
+					if (p_ind < 0) {
+						p_ind = 0;
+					}
+					output.setNeuralSerial((double*)((double*)Y + ind * out_size * class_size), class_size, p_ind);
 
 					input.setScale(1.0 / divrange);
 					output.setScale(1.0 / divoutrange);
@@ -649,8 +653,8 @@ public:
 					printf("\t\t\t\t%d\n", out);
 					for (int i = 0; i < out_size; i++) {
 						int in = 0;
-						for (int p = serial_size - 1; p >= 0; p--) {
-							double value = *(double*)((double*)Y + ind * out_size * serial_size + i * serial_size + p);
+						for (int p = class_size - 1; p >= 0; p--) {
+							double value = *(double*)((double*)Y + ind * out_size * class_size + i * class_size + p);
 							printf("%.2f ", value);
 							in += value * pow(2, p);
 						}
@@ -689,7 +693,7 @@ public:
 						do {
 							//for each serial
 							int in = 0;
-							int p = serial_size - 1;
+							int p = class_size - 1;
 							lpgate = neural->gates.prev(neural->gates.link);
 							pgate = lpgate;
 							if (pgate) {
@@ -714,7 +718,7 @@ public:
 						do {
 							//for each serial
 							int in = 0;
-							int p = serial_size - 1;
+							int p = class_size - 1;
 							lpgate = neural->gates.prev(neural->gates.link);
 							pgate = lpgate;
 							if (pgate) {
@@ -785,7 +789,11 @@ public:
 								//put input
 								input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
 								//put output
-								output.setNeuralSerial((double*)((double*)Y + ind * out_size * serial_size), serial_size, p);
+								int p_ind = p - (serial_size - class_size);
+								if (p_ind < 0) {
+									p_ind = 0;
+								}
+								output.setNeuralSerial((double*)((double*)Y + ind * out_size * class_size), class_size, p_ind);
 
 								input.setScale(1.0 / divrange);
 								output.setScale(1.0 / divoutrange);
@@ -1825,6 +1833,9 @@ public:
 				c = getch_console();
 				if (c == 'q' || c == 'Q') {
 					break;
+				}
+				if (c == 's' || c == 'S') {
+					this->Save("CNN.txt");
 				}
 			}
 

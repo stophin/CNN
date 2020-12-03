@@ -1041,6 +1041,9 @@ public:
 				if (mode == LayerMode::Normal) {
 					neural->biasSum += neural->delta;
 				}
+				else if (IS_RNN(this->mode)) {
+
+				}
 				else {
 					if (mode == LayerMode::Conv) {
 						double sum = 0;

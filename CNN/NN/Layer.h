@@ -97,8 +97,9 @@ public:
 				}
 				else {
 					//memcpy(_neural->map.data, data, mem_size * sizeof(double));
-					memcpy(_neural->map.label, data, mem_size * sizeof(double));
+					memcpy(_neural->map.label, data + i * mem_size, mem_size * sizeof(double));
 				}
+				i++;
 
 				_neural = this->neurals.next(_neural);
 			} while (_neural && _neural != this->neurals.link);
@@ -203,7 +204,7 @@ public:
 
 	void makeMatrix(int kernel_w, int kernel_h) {
 		if (this->mode == LayerMode::Normal) {
-			return;
+			//return;
 		}
 		Neural * neural = this->neurals.link;
 		if (neural) {
@@ -292,7 +293,7 @@ public:
 		if (_neural) {
 			do {
 
-				_neural->value = *(double*)((double*)data + i * serial_size + p);
+				_neural->value = p < 0 ? 0 : *(double*)((double*)data + i * serial_size + p);
 				if (_neural->gate) {
 					_neural->gate->in = _neural->value;
 				}
@@ -742,7 +743,7 @@ public:
 										t += _neural->map.error[0] * conn->kernel.W[0];
 									}
 									else if (mode == LayerMode::Normal) {
-										t += _neural->delta;
+										t += conn->weight * _neural->delta;
 									}
 								}
 							}
@@ -800,7 +801,7 @@ public:
 							neural->map.error[0] = t * tan_h_1(neural->map.data[0]);
 						}
 						else if (mode == LayerMode::Normal) {
-							neural->map.error[0] = t;
+							neural->map.error[0] = t * eva_fun_1(neural->map.data[0]);
 						}
 					}
 					else {
@@ -880,6 +881,9 @@ public:
 								else {
 									k_size = conn->kernel_w * conn->kernel_h;
 									memset(conn->kernel.dW, 0, k_size * sizeof(double));
+									if (mode == LayerMode::Output) {
+										conn->deltaSum = 0;
+									}
 								}
 							}
 						}
@@ -895,6 +899,9 @@ public:
 				}
 				else {
 					neural->map.db = 0;
+					if (mode == LayerMode::Output) {
+						neural->biasSum = 0;
+					}
 				}
 
 				neural = this->neurals.next(neural);
@@ -973,6 +980,9 @@ public:
 									else if (mode == LayerMode::Output) {
 										conn->kernel.dW[0] += _neural->map.error[0] * neural->map.data[0];
 									}
+									else if (mode == LayerMode::Normal) {
+										conn->deltaSum += neural->output * _neural->delta;
+									}
 								}
 								c++;
 							}
@@ -1006,6 +1016,9 @@ public:
 							neural->map.db += sum;
 						}
 						else if (this->mode == LayerMode::Output) {
+							if (mode == LayerMode::Normal) {
+								neural->biasSum += neural->delta;
+							}
 						}
 					}
 					else {
@@ -1341,6 +1354,9 @@ public:
 									for (int i = 0; i < k_size; i++) {
 										conn->kernel.W[i] = gradient_descent(conn->kernel.W[i], conn->kernel.dW[i] / size, learning_rate, lambda);
 									}
+									if (mode == LayerMode::Output) {
+										conn->weight -= learning_rate * conn->deltaSum / size;//TODO
+									}
 								}
 							}
 						}
@@ -1356,6 +1372,9 @@ public:
 				}
 				else {
 					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, learning_rate, lambda);
+					if (mode == LayerMode::Output) {
+						neural->bias -= learning_rate * neural->biasSum / size;
+					}
 				}
 
 				neural = this->neurals.next(neural);
@@ -1377,6 +1396,9 @@ public:
 				}
 				else {
 					neural->map.b = gradient_descent(neural->map.b, neural->map.db / size, learning_rate, lambda);
+					if (mode == LayerMode::Output) {
+						neural->bias -= learning_rate * neural->biasSum / size;
+					}
 				}
 
 				neural = this->neurals.next(neural);
@@ -1612,6 +1634,22 @@ public:
 											memset(conn->_kernel[i].dW, 0, sizeof(double)*conn->kernel_w * conn->kernel_h);
 										}
 									}
+									if (this->mode == LayerMode::Output) {
+										if (mode > 0) {
+											if (conn->_deltaSum) {
+												delete[] conn->_deltaSum;
+												conn->_deltaSum = NULL;
+											}
+										}
+										if (mode == 1) {
+											conn->_deltaSum = new EFTYPE[tc];
+										}
+										if (mode != 2) {
+											for (int i = 0; i < tc; i++) {
+												conn->_deltaSum[i] = 0;
+											}
+										}
+									}
 								}
 							}
 						}
@@ -1643,6 +1681,22 @@ public:
 					if (mode != 2) {
 						for (int i = 0; i < tc; i++) {
 							neural->_map[i].db = 0;
+						}
+					}
+					if (this->mode == LayerMode::Output) {
+						if (mode > 0) {
+							if (neural->_biasSum) {
+								delete[] neural->_biasSum;
+								neural->_biasSum = NULL;
+							}
+						}
+						if (mode == 1) {
+							neural->_biasSum = new EFTYPE[tc];
+						}
+						if (mode != 2) {
+							for (int i = 0; i < tc; i++) {
+								neural->_biasSum[i] = 0;
+							}
 						}
 					}
 				}
@@ -1686,6 +1740,22 @@ public:
 					if (mode != 2) {
 						for (int i = 0; i < tc; i++) {
 							neural->_map[i].db = 0;
+						}
+					}
+					if (this->mode == LayerMode::Output) {
+						if (mode > 0) {
+							if (neural->_biasSum) {
+								delete[] neural->_biasSum;
+								neural->_biasSum = NULL;
+							}
+						}
+						if (mode == 1) {
+							neural->_biasSum = new EFTYPE[tc];
+						}
+						if (mode != 2) {
+							for (int i = 0; i < tc; i++) {
+								neural->_biasSum[i] = 0;
+							}
 						}
 					}
 				}
@@ -1792,8 +1862,9 @@ public:
 				}
 				else {
 					//memcpy(_neural->_map[tid].data, data, mem_size * sizeof(double));
-					memcpy(_neural->_map[tid].label, data, mem_size * sizeof(double));
+					memcpy(_neural->_map[tid].label, data + i * mem_size, mem_size * sizeof(double));
 				}
+				i++;
 
 				_neural = this->neurals.next(_neural);
 			} while (_neural && _neural != this->neurals.link);
@@ -1866,6 +1937,9 @@ public:
 									else if (mode == LayerMode::Output) {
 										conn->_kernel[tid].dW[0] += _neural->_map[tid].error[0] * neural->_map[tid].data[0];
 									}
+									else if (mode == LayerMode::Normal) {
+										conn->_deltaSum[tid] += neural->_output[tid] * _neural->_delta[tid];
+									}
 								}
 							}
 						}
@@ -1895,6 +1969,9 @@ public:
 							neural->_map[tid].db += sum;
 						}
 						else if (this->mode == LayerMode::Output) {
+							if (mode == LayerMode::Normal) {
+								neural->_biasSum[tid] += neural->_delta[tid];
+							}
 						}
 					}
 					else {
@@ -1980,6 +2057,11 @@ public:
 											conn->kernel.dW[j] += conn->_kernel[i].dW[j];
 										}
 									}
+									if (this->mode == LayerMode::Output) {
+										for (int i = 0; i < tc; i++) {
+											conn->deltaSum += conn->_deltaSum[i];
+										}
+									}
 								}
 							}
 						}
@@ -1995,6 +2077,11 @@ public:
 				else {
 					for (int i = 0; i < tc; i++) {
 						neural->map.db += neural->_map[i].db;
+					}
+					if (this->mode == LayerMode::Output) {
+						for (int i = 0; i < tc; i++) {
+							neural->biasSum += neural->_biasSum[i];
+						}
 					}
 				}
 
@@ -2126,7 +2213,7 @@ public:
 							t += neural->map.b;
 							neural->_map[tid].data[0] = tan_h(t);
 							//make it to output
-							neural->output = neural->_map[tid].data[0];
+							neural->_output[tid] = neural->_map[tid].data[0];
 						}
 					}
 					else {
@@ -2212,7 +2299,7 @@ public:
 										t += _neural->_map[tid].error[0] * conn->kernel.W[0];
 									}
 									else if (mode == LayerMode::Normal) {
-										t += _neural->_delta[tid];
+										t += conn->weight * _neural->_delta[tid];
 									}
 								}
 							}
@@ -2258,7 +2345,7 @@ public:
 							neural->_map[tid].error[0] = t * tan_h_1(neural->_map[tid].data[0]);
 						}
 						else if (mode == LayerMode::Normal) {
-							neural->_map[tid].error[0] = t;
+							neural->_map[tid].error[0] = t * eva_fun_1(neural->_map[tid].data[0]);
 						}
 					}
 					else {
@@ -2391,10 +2478,18 @@ public:
 	}
 	//activation function
 	EFTYPE eva_fun(EFTYPE x) {
+#ifdef _NANO_CNN_
+		return atanh(x);
+#else
 		return sigmod(x);
+#endif
 	}
 	EFTYPE eva_fun_1(EFTYPE S) {
+#ifdef _NANO_CNN_
+		return atanh_1(S);
+#else
 		return sigmod_1(S);
+#endif
 	}
 	//A和B是激活函数的参数
 #define A        MAX_SIMULATION_RANGE_OUTPUT

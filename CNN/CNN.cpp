@@ -765,7 +765,17 @@ int test_sample() {
 
 	INT i, j, k;
 
+#define CNN_FULL_CONNECTION
+
+#ifndef CNN_FULL_CONNECTION
 	Network nets(LayerMode::Input, LayerMode::Output);
+	Layer input(LayerMode::Input);
+	Layer output(LayerMode::Output);
+#else
+	Network nets(LayerMode::Input, LayerMode::Normal);
+	Layer input(LayerMode::Input);
+	Layer output(LayerMode::Normal);
+#endif
 
 	//inputs
 	nets.input.addNeural(1);
@@ -794,7 +804,11 @@ int test_sample() {
 		{LayerMode::Normal, 10, 1, 1},//normal
 		{LayerMode::Normal, 10, 1, 1},//normal
 	};
+#ifndef CNN_FULL_CONNECTION
 	for (i = 0; i < 6; i++) {
+#else
+	for (i = 0; i < 8; i++) {
+#endif
 		if (layers[i][0] == LayerMode::Input) {
 			continue;
 		}
@@ -890,9 +904,8 @@ int test_sample() {
 	//getch();
 
 	//test input
-	Layer input(LayerMode::Input);
 	input.addNeural(1);
-	Layer output(LayerMode::Output);
+
 	output.addNeural(1);
 	output.addNeural(2);
 	output.addNeural(3);
@@ -1084,8 +1097,13 @@ int test_sample() {
 				EFTYPE predict_softmax = 0;
 				if (neural) {
 					do {
+#ifndef CNN_FULL_CONNECTION
 						result_softmax += exp(neural->map.label[0]);
 						predict_softmax += exp(neural->map.data[0]);
+#else
+						result_softmax += exp(neural->value);
+						predict_softmax += exp(neural->output);
+#endif
 
 						neural = nets.output.neurals.next(neural);
 					} while (neural && neural != nets.output.neurals.link);
@@ -1099,6 +1117,7 @@ int test_sample() {
 				i = 0;
 				if (neural) {
 					do {
+#ifndef CNN_FULL_CONNECTION
 						printf("%e %e", neural->map.label[0], neural->map.data[0]);
 						EFTYPE f = neural->map.label[0] - neural->map.data[0];
 						f = f * f / (divy * divy);
@@ -1114,6 +1133,23 @@ int test_sample() {
 							predict_softmax_max = softmax;
 							predict = i;
 						}
+#else
+						printf("%e %e", neural->value, neural->output);
+						EFTYPE f = neural->value - neural->output;
+						f = f * f / (divy * divy);
+						e += f;
+						printf(" error: %lf\n", f);
+						softmax = exp(neural->value) / result_softmax;
+						if (softmax > result_softmax_max) {
+							result_softmax_max = softmax;
+							result = i;
+						}
+						softmax = exp(neural->output) / result_softmax;
+						if (softmax > predict_softmax_max) {
+							predict_softmax_max = softmax;
+							predict = i;
+						}
+#endif
 						i++;
 
 						neural = nets.output.neurals.next(neural);

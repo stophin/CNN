@@ -922,6 +922,9 @@ public:
 				}
 				else {
 					neural->map.db = 0;
+					if (mode == LayerMode::Output) {
+						neural->biasSum = 0;
+					}
 				}
 
 				neural = this->neurals.next(neural);
@@ -2026,6 +2029,7 @@ public:
 					}
 					else if (mode == LayerMode::Output) {
 						neural->_map[tid].db += neural->_map[tid].error[0];
+						neural->_biasSum[tid] += neural->_delta[tid];
 					}
 				}
 
@@ -2101,6 +2105,11 @@ public:
 				}else {
 					for (int i = 0; i < tc; i++) {
 						neural->map.db += neural->_map[i].db;
+					}
+					if (this->mode == LayerMode::Output) {
+						for (int i = 0; i < tc; i++) {
+							neural->biasSum += neural->_biasSum[i];
+						}
 					}
 				}
 

@@ -1782,7 +1782,11 @@ public:
 									break;
 								}
 								if (c == 's' || c == 'S') {
+#ifdef _NANO_CIFAR_
+									this->Save("CNN_cifar.txt");
+#else
 									this->Save("CNN.txt");
+#endif
 								}
 
 								neural = layer->neurals.next(neural);
@@ -1835,7 +1839,11 @@ public:
 					break;
 				}
 				if (c == 's' || c == 'S') {
+#ifdef _NANO_CIFAR_
+					this->Save("CNN_cifar.txt");
+#else
 					this->Save("CNN.txt");
+#endif
 				}
 			}
 

@@ -1158,6 +1158,9 @@ int test_sample() {
 				printf("result: %d  predict: %d\n", result, predict);
 				printf("total error: %lf\n", e);
 			}
+			if (ind == -2) {
+				break;
+			}
 		}
 	}
 #ifdef _CNN_SHOW_GUI_
@@ -1188,6 +1191,635 @@ int test_sample() {
 	free(test_sample);
 	return 0;
 }
+const int label_cifar_count = 10;
+const int label_cifar_size = 20;
+const int train_cifar_count = 50000;
+const int test_cifar_count = 10000;
+int read_cifar_label(char **labels, const char * file_name, int start_count) {
+	int count = 0;
+	FILE *fp = NULL;
+	fopen_s(&fp, file_name, "rb");
+
+	if (!fp) {
+		return count;
+	}
+	for (int i = 0; i < label_cifar_count; i++) {
+		fgets(labels[i], label_cifar_size, fp);
+		for (int j = 0; j < label_cifar_size && labels[i][j]; j++) {
+			if (labels[i][j] == '\r' || labels[i][j] == '\n') {
+				labels[i][j] = 0;
+				break;
+			}
+		}
+		if (feof(fp)) {
+			break;
+		}
+		count++;
+	}
+	return count;
+}
+int read_cifar_data(Sample *sample, const char * file_name, int start_count) {
+	int count = 0;
+	FILE *fp = NULL;
+	fopen_s(&fp, file_name, "rb");
+	if (!fp) {
+		return count;
+	}
+	int channel = 3;
+	double scale_max = 1.0;
+	double scale_min = -1.0;
+	unsigned char value;
+	for (int i = 0; i + start_count < train_cifar_count; i++) {
+		fread((char*)&value, sizeof(char), 1, fp);
+		if (feof(fp)) {
+			break;
+		}
+		Sample& _sample = sample[i + start_count];
+		_sample.label = (double*)malloc(sizeof(double) * label_cifar_count);
+		for (int j = 0; j < label_cifar_count; j++) {
+			if (j == (int)value) {
+				_sample.label[j] = 0.8;
+			}
+			else {
+				_sample.label[j] = -0.8;
+			}
+		}
+		_sample.data = (double*)malloc(sizeof(double) * width * height * channel);
+		for (int j = 0; j < channel; j++) {
+			for (int x = 0; x < width; x++) {
+				for (int y = 0; y < height; y++) {
+					int ind = width * height * j + x * height + y;
+					fread((char*)&value, sizeof(char), 1, fp);
+					_sample.data[ind] = ((double)value / 255.0) * (scale_max - scale_min) + scale_min;
+				}
+			}
+		}
+		count++;
+	}
+	return count;
+}
+int test_cifar() {
+
+	//labels
+	char ** labels = (char**)malloc(label_cifar_count * sizeof(char*));
+	for (int i = 0; i < label_cifar_count; i++) {
+		labels[i] = (char*)malloc(label_cifar_size * sizeof(char));
+	}
+	read_cifar_label(labels, "./cifar10/batches.meta.txt", 0);
+
+#ifdef _NANO_DEBUG_
+	for (int i = 0; i < label_cifar_count; i++) {
+		printf("%d %s\n", i, labels[i]);
+	}
+	//getch_console();
+#endif
+
+	// 训练数据
+	Sample *train_sample = (Sample *)malloc(train_cifar_count * sizeof(Sample));
+	memset(train_sample, 0, train_cifar_count * sizeof(Sample));
+	train_sample->sample_w = width;
+	train_sample->sample_h = height;
+	train_sample->sample_count = train_cifar_count;
+	int train_cifar_count_real = 0;
+	train_cifar_count_real += read_cifar_data(train_sample, "./cifar10/data_batch_1.bin", train_cifar_count_real);
+	printf("read %d\n", train_cifar_count_real);
+//#define _CIFAR_FULL_DATA_
+#ifdef _CIFAR_FULL_DATA_
+	train_cifar_count_real += read_cifar_data(train_sample, "./cifar10/data_batch_2.bin", train_cifar_count_real);
+	printf("read %d\n", train_cifar_count_real);
+	train_cifar_count_real += read_cifar_data(train_sample, "./cifar10/data_batch_3.bin", train_cifar_count_real);
+	printf("read %d\n", train_cifar_count_real);
+	train_cifar_count_real += read_cifar_data(train_sample, "./cifar10/data_batch_4.bin", train_cifar_count_real);
+	printf("read %d\n", train_cifar_count_real);
+	train_cifar_count_real += read_cifar_data(train_sample, "./cifar10/data_batch_5.bin", train_cifar_count_real);
+	printf("read %d\n", train_cifar_count_real);
+#endif
+
+#ifdef _NANO_DEBUG_
+	while (1) {
+		INT ind = 0;
+		while (scanf("%d", &ind) != 1) {
+			getchar();
+			fflush(stdin);
+		}
+		if (ind < 0 || ind >= train_cifar_count_real) {
+			break;
+		}
+		int label = 0;
+		for (int i = 0; i < label_cifar_count; i++) {
+			if (train_sample[ind].label[i] > 0) {
+				label = i;
+				break;
+			}
+		}
+		printf("%d %d(%s)\n", ind, label, labels[label]);
+		double scale_max = 1.0;
+		double scale_min = -1.0;
+		EP_ClearDevice();
+		EFTYPE width_r = (EFTYPE)width / show_width;
+		EFTYPE height_r = (EFTYPE)height / show_height;
+		for (int i = 0; i < show_width; i++) {
+			for (int j = 0; j < show_height; j++) {
+				int index = (int)((INT)(j * height_r)* height + (INT)(i * width_r));
+				double r = train_sample[ind].data[width * height * 0 + index];
+				double g = train_sample[ind].data[width * height * 1 + index];
+				double b = train_sample[ind].data[width * height * 2 + index];
+				ECOLOR rr = (ECOLOR)(((r - scale_min) / (scale_max - scale_min)) * 255.0);
+				ECOLOR gg = (ECOLOR)(((g - scale_min) / (scale_max - scale_min)) * 255.0);
+				ECOLOR bb = (ECOLOR)(((b - scale_min) / (scale_max - scale_min)) * 255.0);
+				EP_SetPixel(i, j, EGERGB(rr, gg, bb));
+			}
+		}
+		EP_RenderFlush();
+	}
+#endif
+
+	// 测试数据
+	Sample *test_sample = (Sample *)malloc(test_cifar_count * sizeof(Sample));
+	memset(test_sample, 0, test_cifar_count * sizeof(Sample));
+	test_sample->sample_w = width;
+	test_sample->sample_h = height;
+	test_sample->sample_count = test_cifar_count;
+	int test_cifar_count_real = 0;
+	test_cifar_count_real += read_cifar_data(test_sample, "./cifar10/test_batch.bin", test_cifar_count_real);
+	printf("read %d\n", test_cifar_count_real);
+
+#ifdef _NANO_DEBUG_
+	while (1) {
+		INT ind = 0;
+		while (scanf("%d", &ind) != 1) {
+			getchar();
+			fflush(stdin);
+		}
+		if (ind < 0 || ind >= train_cifar_count_real) {
+			break;
+		}
+		int label = 0;
+		for (int i = 0; i < label_cifar_count; i++) {
+			if (train_sample[ind].label[i] > 0) {
+				label = i;
+				break;
+			}
+		}
+		printf("%d %d(%s)\n", ind, label, labels[label]);
+		double scale_max = 1.0;
+		double scale_min = -1.0;
+		EP_ClearDevice();
+		EFTYPE width_r = (EFTYPE)width / show_width;
+		EFTYPE height_r = (EFTYPE)height / show_height;
+		for (int i = 0; i < show_width; i++) {
+			for (int j = 0; j < show_height; j++) {
+				int index = (int)((INT)(j * height_r)* height + (INT)(i * width_r));
+				double r = train_sample[ind].data[width * height * 0 + index];
+				double g = train_sample[ind].data[width * height * 1 + index];
+				double b = train_sample[ind].data[width * height * 2 + index];
+				ECOLOR rr = (ECOLOR)(((r - scale_min) / (scale_max - scale_min)) * 255.0);
+				ECOLOR gg = (ECOLOR)(((g - scale_min) / (scale_max - scale_min)) * 255.0);
+				ECOLOR bb = (ECOLOR)(((b - scale_min) / (scale_max - scale_min)) * 255.0);
+				EP_SetPixel(i, j, EGERGB(rr, gg, bb));
+			}
+		}
+		EP_RenderFlush();
+	}
+#endif
+
+	INT i, j, k;
+
+#define CNN_FULL_CONNECTION
+
+#ifndef CNN_FULL_CONNECTION
+	Network nets(LayerMode::Input, LayerMode::Output);
+	Layer input(LayerMode::Input);
+	Layer output(LayerMode::Output);
+#else
+	Network nets(LayerMode::Input, LayerMode::Normal);
+	Layer input(LayerMode::Input);
+	Layer output(LayerMode::Normal);
+#endif
+
+	//inputs
+	nets.input.addNeural(1);
+	nets.input.addNeural(2);
+	nets.input.addNeural(3);
+
+	//outputs
+	nets.output.addNeural(1);
+	nets.output.addNeural(2);
+	nets.output.addNeural(3);
+	nets.output.addNeural(4);
+	nets.output.addNeural(5);
+	nets.output.addNeural(6);
+	nets.output.addNeural(7);
+	nets.output.addNeural(8);
+	nets.output.addNeural(9);
+	nets.output.addNeural(10);
+
+	//layers
+	INT layers[][4] = {
+		{LayerMode::Input, 1, width, height},//input
+		{LayerMode::Conv, 6, 5, 5},//convolutional 1
+		{LayerMode::MaxPool, 6, 1, 1},//pooling 2
+		{LayerMode::Conv, 16, 5, 5},//convolutional 3
+		{LayerMode::MaxPool, 16, 1, 1},//pooling 4
+		{LayerMode::Conv, 120, 5, 5},//convolutional 5
+		{LayerMode::Output, 20, 1, 1},//output
+		{LayerMode::Normal, 10, 1, 1},//normal
+		{LayerMode::Normal, 10, 1, 1},//normal
+	};
+#ifndef CNN_FULL_CONNECTION
+	for (i = 0; i < 6; i++) {
+#else
+	for (i = 0; i < 8; i++) {
+#endif
+		if (layers[i][0] == LayerMode::Input) {
+			continue;
+		}
+		Layer * hidden = new Layer((LayerMode)layers[i][0]);
+
+		//formula of perfect hidden num:
+		//sqrt(in_num + out_num) + a
+		//a is 5
+		for (j = 0; j < layers[i][1]; j++) {
+			hidden->addNeural(1 + j + (i + 1) * 1000);
+		}
+
+		nets.hiddens.insertLink(hidden);
+		nets.layers.insertLink(hidden, &nets.output, NULL);
+
+		hidden = nets.layers.link;
+		if (hidden) {
+			Layer * _hidden = nets.layers.next(hidden);
+			if (_hidden && _hidden != nets.layers.link) {
+				do {
+
+					printf("%p, %p->", hidden, _hidden);
+
+					hidden = _hidden;
+					_hidden = nets.layers.next(_hidden);
+				} while (_hidden && _hidden != nets.layers.link);
+				printf("\n");
+			}
+		}
+
+		hidden = nets.hiddens.link;
+		if (hidden) {
+			do {
+
+				printf("%p=>", hidden);
+
+				hidden = nets.hiddens.next(hidden);
+			} while (hidden && hidden != nets.hiddens.link);
+			printf("\n");
+		}
+	}
+
+	//make connections
+#define O true
+#define X false
+	bool connection_table[6 * 16] =
+	{
+		O, X, X, X, O, O, O, X, X, O, O, O, O, X, O, O,
+		O, O, X, X, X, O, O, O, X, X, O, O, O, O, X, O,
+		O, O, O, X, X, X, O, O, O, X, X, O, X, O, O, O,
+		X, O, O, O, X, X, O, O, O, O, X, X, O, X, O, O,
+		X, X, O, O, O, X, X, O, O, O, O, X, O, O, X, O,
+		X, X, X, O, O, O, X, X, O, O, O, O, X, O, O, O
+	};
+#undef O
+#undef X
+	Layer * hidden = nets.layers.link;
+	if (hidden) {
+		i = 0;
+		Layer * _hidden = nets.layers.next(hidden);
+		if (_hidden && _hidden != nets.layers.link) {
+			do {
+
+				if (hidden->neurals.linkcount == 16 && _hidden->neurals.linkcount == 6) {
+					hidden->makeConnection(*_hidden, ++i, connection_table);
+				}
+				else {
+					hidden->makeConnection(*_hidden, ++i);
+				}
+
+				hidden = _hidden;
+				_hidden = nets.layers.next(_hidden);
+			} while (_hidden && _hidden != nets.layers.link);
+		}
+	}
+
+	//make matrix
+	INT layer_index = 0;
+	hidden = nets.layers.link;
+	if (hidden) {
+		do {
+			hidden->makeMatrix(layers[layer_index][2], layers[layer_index][3]);
+			layer_index++;
+
+			hidden = nets.layers.next(hidden);
+		} while (hidden && hidden != nets.layers.link);
+	}
+
+	nets.Traverse();
+
+	nets.Load("CNN_cifar.txt");
+
+	//getch();
+
+	//test input
+	input.addNeural(1);
+	input.addNeural(2);
+	input.addNeural(3);
+
+	output.addNeural(1);
+	output.addNeural(2);
+	output.addNeural(3);
+	output.addNeural(4);
+	output.addNeural(5);
+	output.addNeural(6);
+	output.addNeural(7);
+	output.addNeural(8);
+	output.addNeural(9);
+	output.addNeural(10);
+
+	input.makeMatrix(width, height);
+	output.makeMatrix(1, 1);
+
+	INT sample_size = train_cifar_count_real;
+	INT sample_size_real = test_cifar_count_real;
+	INT in_size = train_sample->sample_w * train_sample->sample_h;
+	INT out_size = 10;
+	EFTYPE divx = 1.0;
+	EFTYPE divy = 1.0;
+	nets.Scale(divx, divy);
+
+#ifdef _CNN_SHOW_GUI_
+	ThreadParam param;
+	param.tid = 0;
+	__NANOC_THREAD_MUTEX_INIT__(main_mutex, (&param));
+	__NANOC_THREAD_MUTEX_LOCK__(param.main_mutex);
+	__NANOC_THREAD_BEGIN__(param.thread, GUIThread, &param);
+	EFTYPE *draw = new EFTYPE[width * height];
+#endif
+	clock_t start, end;
+	int count = 0;
+	while (1) {
+		count++;
+
+		nets.setLearningRate(0.03);
+
+		start = clock();
+		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
+		nets.TrainCNN(train_sample, 1000, sample_size, in_size, out_size, 0.0001, 3, 10, 1000000);
+		//nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
+		end = clock();
+		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
+
+		//if (kbhit())
+		{
+			printf("\nTraining: %d\n", count);
+			nets.Traverse();
+			INT ind = 0;
+			while (1) {
+#ifdef _CNN_SHOW_GUI_
+				param.tid = 1;
+#endif
+				while (scanf("%d", &ind) != 1) {
+					getchar();
+					fflush(stdin);
+				}
+#ifdef _CNN_SHOW_GUI_
+				double scale_max = 1.0;
+				double scale_min = -1.0;
+				int is_input = 0;
+				if (param.tid == 2) {
+					is_input = 1;
+				}
+				param.tid = 0;
+
+				if (is_input) {
+					printf("input: %d\n", ind);
+
+					EFTYPE width_r = (EFTYPE)width / show_width;
+					EFTYPE height_r = (EFTYPE)height / show_height;
+					for (int i = 0; i < width; i++) {
+						for (int j = 0; j < height; j++) {
+							int ind = i * width + j;
+							int x = (int)(j / width_r);
+							int y = (int)(i / height_r);
+							ECOLOR color = EP_GetPixel(x, y);
+							draw[ind] = ((double)color / 255.0) * (scale_max - scale_min) + scale_min;
+						}
+					}
+					nets.input.setNeuralMatrix(draw, in_size);
+					for (int i = 0; i < out_size; i++) {
+						ECOLOR temp = 0;
+						if (i == ind) {
+							draw[i] = 0.8;
+						}
+						else {
+							draw[i] = -0.8;
+						}
+					}
+					nets.output.setNeural(draw, out_size);
+				}
+				else {
+					if (ind < 0 || ind >= sample_size_real) {
+						break;
+					}
+
+					nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+					nets.output.setNeural(test_sample[ind].label, out_size);
+				}
+#else
+				if (ind < 0 || ind >= sample_size_real) {
+					break;
+				}
+
+				nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+				nets.output.setNeural(test_sample[ind].label, out_size);
+#endif
+				//nets.input.setNeuralMatrix(train_sample[ind].data, in_size);
+				//nets.output.setNeural(train_sample[ind].label, out_size);
+				nets.Forecast(input, &output);
+
+#ifdef _CNN_SHOW_CONV_
+				char c = 0;
+				Layer * layer;
+				int tc = 1;
+				int l = 0;
+				int n = 0;
+				for (int t = 0; t < tc; t++) {
+					layer = nets.layers.link;
+					if (layer) {
+						do {
+							l++;
+							n = 0;
+							Neural *neural = layer->neurals.link;
+							if (neural) {
+								do {
+									n++;
+									EP_ClearDevice();
+									EFTYPE width_r = (EFTYPE)neural->map_w / show_width;
+									EFTYPE height_r = (EFTYPE)neural->map_h / show_height;
+									for (int i = 0; i < show_width; i++) {
+										for (int j = 0; j < show_height; j++) {
+											int ind = (int)((INT)(j * height_r)* neural->map_h + (INT)(i * width_r));
+											double v = 0;
+											if (ind < neural->map_w * neural->map_h) {
+												v = neural->map.data[ind];
+											}
+											ECOLOR color = (ECOLOR)(((v - scale_min) / (scale_max - scale_min)) * 255.0);
+											EP_SetPixel(i, j, color);
+										}
+									}
+									EP_RenderFlush();
+
+									printf("tid: %d/%d, layer: %d/%d, neural: %d/%d\n", t + 1, tc, l, nets.layers.linkcount, n, layer->neurals.linkcount);
+									if (!(c == 'q' || c == 'Q')) {
+										c = getchar();
+									}
+									if (c == 'c' || c == 'q') {
+										break;
+									}
+									if (c == 't' || c == 'T') {
+										break;
+									}
+									if (c == 'q' || c == 'Q') {
+										break;
+									}
+
+									neural = layer->neurals.next(neural);
+								} while (neural && neural != layer->neurals.link);
+							}
+
+							if (c == 't' || c == 'T') {
+								break;
+							}
+							if (c == 'q' || c == 'Q') {
+								break;
+							}
+
+							layer = nets.layers.next(layer);
+						} while (layer && layer != nets.layers.link);
+					}
+					if (c == 'q' || c == 'Q') {
+						break;
+					}
+				}
+#endif
+
+				printf("\n");
+				/*
+				for (i = 0; i < in_size; i++) {
+					printf("%e ", train_sample[ind].data[i]);
+				}*/
+				printf("\n");
+				printf("Actual:\n");
+
+				Neural * neural = nets.output.neurals.link;
+				EFTYPE result_softmax = 0;
+				EFTYPE predict_softmax = 0;
+				if (neural) {
+					do {
+#ifndef CNN_FULL_CONNECTION
+						result_softmax += exp(neural->map.label[0]);
+						predict_softmax += exp(neural->map.data[0]);
+#else
+						result_softmax += exp(neural->value);
+						predict_softmax += exp(neural->output);
+#endif
+
+						neural = nets.output.neurals.next(neural);
+					} while (neural && neural != nets.output.neurals.link);
+				}
+				EFTYPE e = 0;
+				int result = -1;
+				int predict = -1;
+				EFTYPE softmax;
+				EFTYPE result_softmax_max = 0;
+				EFTYPE predict_softmax_max = 0;
+				i = 0;
+				if (neural) {
+					do {
+#ifndef CNN_FULL_CONNECTION
+						printf("%e %e", neural->map.label[0], neural->map.data[0]);
+						EFTYPE f = neural->map.label[0] - neural->map.data[0];
+						f = f * f / (divy * divy);
+						e += f;
+						printf(" error: %lf\n", f);
+						softmax = exp(neural->map.label[0]) / result_softmax;
+						if (softmax > result_softmax_max) {
+							result_softmax_max = softmax;
+							result = i;
+						}
+						softmax = exp(neural->map.data[0]) / result_softmax;
+						if (softmax > predict_softmax_max) {
+							predict_softmax_max = softmax;
+							predict = i;
+						}
+#else
+						printf("%e %e", neural->value, neural->output);
+						EFTYPE f = neural->value - neural->output;
+						f = f * f / (divy * divy);
+						e += f;
+						printf(" error: %lf\n", f);
+						softmax = exp(neural->value) / result_softmax;
+						if (softmax > result_softmax_max) {
+							result_softmax_max = softmax;
+							result = i;
+						}
+						softmax = exp(neural->output) / result_softmax;
+						if (softmax > predict_softmax_max) {
+							predict_softmax_max = softmax;
+							predict = i;
+						}
+#endif
+						i++;
+
+						neural = nets.output.neurals.next(neural);
+					} while (neural && neural != nets.output.neurals.link);
+				}
+				printf("result: %d(%s)  predict: %d(%s)\n", result, labels[result], predict, labels[predict]);
+				printf("total error: %lf\n", e);
+			}
+			if (ind == -2) {
+				break;
+			}
+		}
+	}
+#ifdef _CNN_SHOW_GUI_
+	//release sem
+	//send end singal
+	param.tid = -1;
+	__NANOC_THREAD_MUTEX_LOCK__(param.main_mutex);
+	__NANOC_THREAD_CLOSE__(param.thread);
+	delete[] draw;
+#endif
+	// 释放资源
+	for (int i = 0; i < train_cifar_count; i++)
+	{
+		free(train_sample[i].data);
+		free(train_sample[i].label);
+		train_sample[i].data = NULL;
+		train_sample[i].label = NULL;
+	}
+	free(train_sample);
+
+	for (int i = 0; i < test_cifar_count; i++)
+	{
+		free(test_sample[i].data);
+		free(test_sample[i].label);
+		test_sample[i].data = NULL;
+		test_sample[i].label = NULL;
+	}
+	free(test_sample);
+	for (int i = 0; i < label_cifar_count; i++) {
+		free(labels[i]);
+		labels[i] = NULL;
+	}
+	free(labels);
+	return 0;
+	}
 //将一个10进制整数转换为2进制数
 void int2binary(double _n, double *arr, int binary_dim)
 {
@@ -1525,7 +2157,11 @@ int main(int argc, _TCHAR* argv[])
 #if defined(_NANO_LSTM_) || defined(_NANO_GRU_)
 		test_rnn();
 #elif defined(_NANO_CNN_)
+#if defined(_NANO_CIFAR_)
+		test_cifar();
+#else
 		test_sample();
+#endif
 #elif defined(_NANO_LINEAR1_) || defined(_NANO_LINEAR2_)
 		test_d21();
 #else

@@ -8,6 +8,8 @@ linux_lstm:
 	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_LSTM_ -o CNN_lstm CNN.cpp NN/mt19937ar.cpp -lpthread
 linux_cnn:
 	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_CNN_ -o CNN_cnn CNN.cpp NN/mt19937ar.cpp -lpthread
+linux_cifar:
+	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_CNN_ -D_NANO_CIFAR_ -D_CIFAR_FULL_DATA_ -o CNN_cifar CNN.cpp NN/mt19937ar.cpp -lpthread
 linux_line1:
 	g++ -g -O3 -D_NANO_LINUX_ -D_NANO_LINEAR1_ -o CNN_line1 CNN.cpp NN/mt19937ar.cpp -lpthread
 linux_line2:
@@ -21,6 +23,8 @@ lstm:
 	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_LSTM_ -o CNN_lstm.exe ${SRC_FILE} ${LIB_FILE}
 cnn:
 	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_CNN_ -o CNN_cnn.exe ${SRC_FILE} ${LIB_FILE}
+cifar:
+	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_CNN_ -D_NANO_CIFAR_ -D_CIFAR_FULL_DATA_ -o CNN_cifar.exe ${SRC_FILE} ${LIB_FILE}
 line1:
 	g++ -g -O3 -D_NANO_MINGW_ -D_NANO_LINEAR1_ -o CNN_line1.exe ${SRC_FILE} ${LIB_FILE}
 line2:
@@ -32,6 +36,7 @@ clean:
 	rm ./CNN_gru.exe
 	rm ./CNN_lstm.exe
 	rm ./CNN_cnn.exe
+	rm ./CNN_cifar.exe
 	rm ./CNN_line1.exe
 	rm ./CNN_line2.exe
 	rm ./CNN_line.exe
@@ -47,6 +52,8 @@ lstm_run:
 	./CNN_lstm
 cnn_run:
 	./CNN_cnn
+cifar_run:
+	./CNN_cifar
 line1_run:
 	./CNN_line1
 line2_run:

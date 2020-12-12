@@ -2029,6 +2029,8 @@ public:
 					}
 					else if (mode == LayerMode::Output) {
 						neural->_map[tid].db += neural->_map[tid].error[0];
+					}
+					else if (mode == LayerMode::Normal) {
 						neural->_biasSum[tid] += neural->_delta[tid];
 					}
 				}

@@ -2031,7 +2031,7 @@ public:
 						neural->_map[tid].db += neural->_map[tid].error[0];
 					}
 					else if (mode == LayerMode::Normal) {
-						neural->_biasSum[tid] += neural->_delta[tid];
+						neural->_biasSum[tid] += neural->_map[tid].error[0];
 					}
 				}
 

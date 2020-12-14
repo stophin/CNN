@@ -1216,6 +1216,7 @@ int read_cifar_label(char **labels, const char * file_name, int start_count) {
 		}
 		count++;
 	}
+	fclose(fp);
 	return count;
 }
 int read_cifar_data(Sample *sample, const char * file_name, int start_count) {
@@ -1256,6 +1257,7 @@ int read_cifar_data(Sample *sample, const char * file_name, int start_count) {
 		}
 		count++;
 	}
+	fclose(fp);
 	return count;
 }
 int test_cifar() {
@@ -1385,9 +1387,9 @@ int test_cifar() {
 
 	INT i, j, k;
 
-#define CNN_FULL_CONNECTION
+#define CIFAR_FULL_CONNECTION
 
-#ifndef CNN_FULL_CONNECTION
+#ifndef CIFAR_FULL_CONNECTION
 	Network nets(LayerMode::Input, LayerMode::Output);
 	Layer input(LayerMode::Input);
 	Layer output(LayerMode::Output);
@@ -1426,7 +1428,7 @@ int test_cifar() {
 		{LayerMode::Normal, 10, 1, 1},//normal
 		{LayerMode::Normal, 10, 1, 1},//normal
 	};
-#ifndef CNN_FULL_CONNECTION
+#ifndef CIFAR_FULL_CONNECTION
 	for (i = 0; i < 6; i++) {
 #else
 	for (i = 0; i < 8; i++) {
@@ -1721,7 +1723,7 @@ int test_cifar() {
 				EFTYPE predict_softmax = 0;
 				if (neural) {
 					do {
-#ifndef CNN_FULL_CONNECTION
+#ifndef CIFAR_FULL_CONNECTION
 						result_softmax += exp(neural->map.label[0]);
 						predict_softmax += exp(neural->map.data[0]);
 #else
@@ -1741,7 +1743,7 @@ int test_cifar() {
 				i = 0;
 				if (neural) {
 					do {
-#ifndef CNN_FULL_CONNECTION
+#ifndef CIFAR_FULL_CONNECTION
 						printf("%e %e", neural->map.label[0], neural->map.data[0]);
 						EFTYPE f = neural->map.label[0] - neural->map.data[0];
 						f = f * f / (divy * divy);

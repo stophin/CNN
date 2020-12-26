@@ -963,6 +963,105 @@ int test_sample() {
 					getchar();
 					fflush(stdin);
 				}
+				if (ind < 0 && ind == -2) {
+					ind = 0;
+					double wrong = 0;
+					double right = 0;
+					for (ind = 0; ind < sample_size_real; ind++) {
+						nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+						nets.output.setNeural(test_sample[ind].label, out_size);
+
+						nets.Forecast(input, &output);
+
+						//printf("\n");
+						/*
+						for (i = 0; i < in_size; i++) {
+							printf("%e ", train_sample[ind].data[i]);
+						}*/
+						//printf("\n");
+						//printf("Actual:\n");
+
+						Neural * neural = nets.output.neurals.link;
+						EFTYPE result_softmax = 0;
+						EFTYPE predict_softmax = 0;
+						if (neural) {
+							do {
+#ifndef CNN_FULL_CONNECTION
+								result_softmax += exp(neural->map.label[0]);
+								predict_softmax += exp(neural->map.data[0]);
+#else
+								result_softmax += exp(neural->value);
+								predict_softmax += exp(neural->output);
+#endif
+
+								neural = nets.output.neurals.next(neural);
+							} while (neural && neural != nets.output.neurals.link);
+						}
+						EFTYPE e = 0;
+						int result = -1;
+						int predict = -1;
+						EFTYPE softmax;
+						EFTYPE result_softmax_max = 0;
+						EFTYPE predict_softmax_max = 0;
+						i = 0;
+						if (neural) {
+							do {
+#ifndef CNN_FULL_CONNECTION
+								//printf("%e %e", neural->map.label[0], neural->map.data[0]);
+								EFTYPE f = neural->map.label[0] - neural->map.data[0];
+								f = f * f / (divy * divy);
+								e += f;
+								//printf(" error: %lf\n", f);
+								softmax = exp(neural->map.label[0]) / result_softmax;
+								if (softmax > result_softmax_max) {
+									result_softmax_max = softmax;
+									result = i;
+								}
+								softmax = exp(neural->map.data[0]) / result_softmax;
+								if (softmax > predict_softmax_max) {
+									predict_softmax_max = softmax;
+									predict = i;
+								}
+#else
+								//printf("%e %e", neural->value, neural->output);
+								EFTYPE f = neural->value - neural->output;
+								f = f * f / (divy * divy);
+								e += f;
+								//printf(" error: %lf\n", f);
+								softmax = exp(neural->value) / result_softmax;
+								if (softmax > result_softmax_max) {
+									result_softmax_max = softmax;
+									result = i;
+								}
+								softmax = exp(neural->output) / result_softmax;
+								if (softmax > predict_softmax_max) {
+									predict_softmax_max = softmax;
+									predict = i;
+								}
+#endif
+								i++;
+
+								neural = nets.output.neurals.next(neural);
+							} while (neural && neural != nets.output.neurals.link);
+						}
+						//printf("result: %d  predict: %d\n", result, predict);
+						//printf("total error: %lf\n", e);
+						if (result == predict) {
+							right++;
+						}
+						else {
+							wrong++;
+						}
+						if (ind > 0 && (ind % (sample_size_real / 10) == 0)) {
+							printf("Total: %d/%d, wrong: %.2f, right: %.2f, percent: %.10f\n", ind, sample_size_real, wrong, right, right / ind);
+						}
+					}
+					printf("Total: %d/%d, wrong: %.2f, right: %.2f, percent: %.10f\n", ind, sample_size_real, wrong, right, right / ind);
+					printf("estimation done\n");
+					getch_console();
+					ind = -2;
+					break;
+				}
 #ifdef _CNN_SHOW_GUI_
 				double scale_max = 1.0;
 				double scale_min = -1.0;
@@ -1158,7 +1257,7 @@ int test_sample() {
 				printf("result: %d  predict: %d\n", result, predict);
 				printf("total error: %lf\n", e);
 			}
-			if (ind == -2) {
+			if (ind == -3) {
 				break;
 			}
 		}
@@ -1571,7 +1670,7 @@ int test_cifar() {
 
 		start = clock();
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
-		nets.TrainCNN(train_sample, 1000, sample_size, in_size, out_size, 0.0001, 3, 10, 1000000);
+		nets.TrainCNN(train_sample, 1000, sample_size, in_size, out_size, 46, 3, 10, 1000000);
 		//nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
 		end = clock();
 		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
@@ -1588,6 +1687,105 @@ int test_cifar() {
 				while (scanf("%d", &ind) != 1) {
 					getchar();
 					fflush(stdin);
+				}
+				if (ind < 0 && ind == -2) {
+					ind = 0;
+					double wrong = 0;
+					double right = 0;
+					for (ind = 0; ind < sample_size_real; ind++) {
+						nets.input.setNeuralMatrix(test_sample[ind].data, in_size);
+						nets.output.setNeural(test_sample[ind].label, out_size);
+
+						nets.Forecast(input, &output);
+
+						//printf("\n");
+						/*
+						for (i = 0; i < in_size; i++) {
+							printf("%e ", train_sample[ind].data[i]);
+						}*/
+						//printf("\n");
+						//printf("Actual:\n");
+
+						Neural * neural = nets.output.neurals.link;
+						EFTYPE result_softmax = 0;
+						EFTYPE predict_softmax = 0;
+						if (neural) {
+							do {
+#ifndef CIFAR_FULL_CONNECTION
+								result_softmax += exp(neural->map.label[0]);
+								predict_softmax += exp(neural->map.data[0]);
+#else
+								result_softmax += exp(neural->value);
+								predict_softmax += exp(neural->output);
+#endif
+
+								neural = nets.output.neurals.next(neural);
+							} while (neural && neural != nets.output.neurals.link);
+						}
+						EFTYPE e = 0;
+						int result = -1;
+						int predict = -1;
+						EFTYPE softmax;
+						EFTYPE result_softmax_max = 0;
+						EFTYPE predict_softmax_max = 0;
+						i = 0;
+						if (neural) {
+							do {
+#ifndef CIFAR_FULL_CONNECTION
+								//printf("%e %e", neural->map.label[0], neural->map.data[0]);
+								EFTYPE f = neural->map.label[0] - neural->map.data[0];
+								f = f * f / (divy * divy);
+								e += f;
+								//printf(" error: %lf\n", f);
+								softmax = exp(neural->map.label[0]) / result_softmax;
+								if (softmax > result_softmax_max) {
+									result_softmax_max = softmax;
+									result = i;
+								}
+								softmax = exp(neural->map.data[0]) / result_softmax;
+								if (softmax > predict_softmax_max) {
+									predict_softmax_max = softmax;
+									predict = i;
+								}
+#else
+								//printf("%e %e", neural->value, neural->output);
+								EFTYPE f = neural->value - neural->output;
+								f = f * f / (divy * divy);
+								e += f;
+								//printf(" error: %lf\n", f);
+								softmax = exp(neural->value) / result_softmax;
+								if (softmax > result_softmax_max) {
+									result_softmax_max = softmax;
+									result = i;
+								}
+								softmax = exp(neural->output) / result_softmax;
+								if (softmax > predict_softmax_max) {
+									predict_softmax_max = softmax;
+									predict = i;
+								}
+#endif
+								i++;
+
+								neural = nets.output.neurals.next(neural);
+							} while (neural && neural != nets.output.neurals.link);
+						}
+						//printf("result: %d(%s)  predict: %d(%s)\n", result, labels[result], predict, labels[predict]);
+						//printf("total error: %lf\n", e);
+						if (result == predict) {
+							right++;
+						}
+						else {
+							wrong++;
+						}
+						if (ind > 0 && (ind % (sample_size_real / 10) == 0)) {
+							printf("Total: %d/%d, wrong: %.2f, right: %.2f, percent: %.10f\n", ind, sample_size_real, wrong, right, right / ind);
+						}
+					}
+					printf("Total: %d/%d, wrong: %.2f, right: %.2f, percent: %.10f\n", ind, sample_size_real, wrong, right, right / ind);
+					printf("estimation done\n");
+					getch_console();
+					ind = -2;
+					break;
 				}
 #ifdef _CNN_SHOW_GUI_
 				double scale_max = 1.0;
@@ -1784,7 +1982,7 @@ int test_cifar() {
 				printf("result: %d(%s)  predict: %d(%s)\n", result, labels[result], predict, labels[predict]);
 				printf("total error: %lf\n", e);
 			}
-			if (ind == -2) {
+			if (ind == -3) {
 				break;
 			}
 		}

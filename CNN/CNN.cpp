@@ -2101,8 +2101,8 @@ int test_rnn() {
 	EFTYPE divy = 1.0;
 	nets.Scale(divx, divy);
 
-	INT serial_size = 8;
-	INT class_size = 8;
+	INT serial_size = 30;
+	INT class_size = 30;
 	double * X = new double[sample_size_real * in_size * serial_size];
 	double * Y = new double[sample_size_real * out_size * class_size];
 
@@ -2116,10 +2116,14 @@ int test_rnn() {
 	while (1) {
 		count++;
 
+#ifdef _NANO_LSTM_
 		nets.setLearningRate(0.03);
+#else
+		nets.setLearningRate(0.003);
+#endif
 
 		for (i = 0; i < sample_size_real; i++) {
-			X[i * in_size * serial_size + 0 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
+ 			X[i * in_size * serial_size + 0 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
 			X[i * in_size * serial_size + 1 * serial_size + 0] = (int)((double)rand() / RAND_MAX * largest_number / 2.0);
 			Y[i * out_size * class_size + 0 * class_size + 0] = X[i * in_size * serial_size + 0 * serial_size + 0] + X[i * in_size * serial_size + 1 * serial_size + 0];
 			if (i < 10) {

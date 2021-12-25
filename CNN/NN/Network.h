@@ -504,7 +504,7 @@ public:
 				//for each serial_size
 				for (int p = 0; p < serial_size; p++) {
 					//put input
-					input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
+ 					input.setNeuralSerial((double*)((double*)X + ind * in_size * serial_size), serial_size, p);
 					//put output
 					int p_ind = p - (serial_size - class_size);
 					if (p_ind < 0) {

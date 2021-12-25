@@ -743,9 +743,149 @@ __NANOC_THREAD_FUNC_BEGIN__(GUIThread) {
 	__NANOC_THREAD_FUNC_END__(0);
 }
 #endif
+
+void traverseImage(Sample* sample, const char* file_path, int mode = 0) {
+	char temp_path[300];
+	if (mode == 0) {
+		//digit/handwriting_0_and_1/0_1.jpg~0_20.jpg->3_1.jpg~3_20.jpg
+		int mem_size = classes_count * sizeof(double);
+		double scale_max = 1.0;
+		double scale_min = -1.0;
+		int count = 0;
+		for (int i = 0; i < 4; i++) {
+ 			for (int j = 0; j < 20; j++) {
+				sprintf_s(temp_path, "%s%d_%d.jpg", file_path, i, j + 1);
+
+				sample[count].label = (double*)malloc(mem_size);
+				for (int k = 0; k < classes_count; k++) {
+					sample[count].label[k] = -0.8;
+				}
+				sample[count].label[i] = 0.8;
+
+				EPTYPE _width = 32, _height = 32;
+#ifdef _NANOC_WINDOWS_
+#ifdef USING_EPAINT_TEST
+				IMAGE_EX image;
+				image.getimage(temp_path, _width, _height);
+				DWORD* buffer = image.m_pBuffer;
+#else
+				EIMAGE image = NULL;
+				EP_LoadImage(image, temp_path, _width, _height);
+				DWORD* buffer = EP_GetImageBuffer(image);
+#endif
+#else
+				IMAGE_EX image;
+				image.getimage(temp_path, _width, _height);
+				DWORD* buffer = image.m_pBuffer;
+#endif
+				int width = (int)_width;
+				int height = (int)_height;
+
+				sample[count].data = (double*)malloc(width * height * sizeof(double));
+				for (int w = 0; w < width; w++) {
+					for (int h = 0; h < height; h++) {
+						sample[count].data[w * height + h] = ((double)(EGEGET_R(buffer[w * height + h])) / 255.0) * (scale_max - scale_min) + scale_min;
+					}
+				}
+				count++;
+			}
+		}
+	}
+	else if (mode == 1) {
+		//digit/handwriting_1/0.jpg~9.jpg
+		int mem_size = classes_count * sizeof(double);
+		double scale_max = 1.0;
+		double scale_min = -1.0;
+		int count = 0;
+		for (int i = 0; i < 10; i++) {
+			sprintf_s(temp_path, "%s%d.jpg", file_path, i);
+
+			sample[count].label = (double*)malloc(mem_size);
+			for (int k = 0; k < classes_count; k++) {
+				sample[count].label[k] = -0.8;
+			}
+			sample[count].label[i] = 0.8;
+
+			EPTYPE _width = 32, _height = 32;
+#ifdef _NANOC_WINDOWS_
+#ifdef USING_EPAINT_TEST
+			IMAGE_EX image;
+			image.getimage(temp_path, _width, _height);
+			DWORD* buffer = image.m_pBuffer;
+#else
+			EIMAGE image = NULL;
+			EP_LoadImage(image, temp_path, _width, _height);
+			DWORD* buffer = EP_GetImageBuffer(image);
+#endif
+#else
+			IMAGE_EX image;
+			image.getimage(temp_path, _width, _height);
+			DWORD* buffer = image.m_pBuffer;
+#endif
+			int width = (int)_width;
+			int height = (int)_height;
+
+			sample[count].data = (double*)malloc(width * height * sizeof(double));
+			for (int w = 0; w < width; w++) {
+				for (int h = 0; h < height; h++) {
+					sample[count].data[w * height + h] = ((double)(EGEGET_R(buffer[w * height + h])) / 255.0) * (scale_max - scale_min) + scale_min;
+				}
+			}
+			count++;
+		}
+	}
+	else if (mode == 2) {
+		//digit/handwriting_2/0.png~9.png
+		int mem_size = classes_count * sizeof(double);
+		double scale_max = 1.0;
+		double scale_min = -1.0;
+		int count = 0;
+		for (int i = 0; i < 10; i++) {
+			sprintf_s(temp_path, "%s%d.png", file_path, i);
+
+			sample[count].label = (double*)malloc(mem_size);
+			for (int k = 0; k < classes_count; k++) {
+				sample[count].label[k] = -0.8;
+			}
+			sample[count].label[i] = 0.8;
+
+			EPTYPE _width = 32, _height = 32;
+#ifdef _NANOC_WINDOWS_
+#ifdef USING_EPAINT_TEST
+			IMAGE_EX image;
+			image.getimage(temp_path, _width, _height);
+			DWORD* buffer = image.m_pBuffer;
+#else
+			EIMAGE image = NULL;
+			EP_LoadImage(image, temp_path, _width, _height);
+			DWORD* buffer = EP_GetImageBuffer(image);
+#endif
+#else
+			IMAGE_EX image;
+			image.getimage(temp_path, _width, _height);
+			DWORD* buffer = image.m_pBuffer;
+#endif
+			int width = (int)_width;
+			int height = (int)_height;
+
+			sample[count].data = (double*)malloc(width * height * sizeof(double));
+			for (int w = 0; w < width; w++) {
+				for (int h = 0; h < height; h++) {
+					//reverse color
+					DWORD value = buffer[w * height + h];
+					value = EGERGB((255 - EGEGET_R(value)), (255 - EGEGET_G(value)), (255 - EGEGET_B(value)));
+					sample[count].data[w * height + h] = ((double)(EGEGET_R(value)) / 255.0) * (scale_max - scale_min) + scale_min;
+				}
+			}
+			count++;
+		}
+	}
+}
+
 int test_sample() {
 
 	// 训练数据
+#ifdef USING_MNIST_DATA
 	Sample *train_sample = (Sample *)malloc(train_sample_count * sizeof(Sample));
 	memset(train_sample, 0, train_sample_count * sizeof(Sample));
 	train_sample->sample_w = width;
@@ -753,8 +893,19 @@ int test_sample() {
 	train_sample->sample_count = train_sample_count;
 	read_mnist_data(train_sample, "./mnist/train-images.idx3-ubyte");
 	read_mnist_label(train_sample, "./mnist/train-labels.idx1-ubyte");
+#else
+	int train_sample_count = 80;
+	Sample* train_sample = (Sample*)malloc(train_sample_count * sizeof(Sample));
+	memset(train_sample, 0, train_sample_count * sizeof(Sample));
+	train_sample->sample_w = width;
+	train_sample->sample_h = height;
+	train_sample->sample_count = train_sample_count;
+	traverseImage(train_sample, "./digit/handwriting_0_and_1/", 0);
+
+#endif
 
 	// 测试数据
+#ifdef USING_MNIST_DATA
 	Sample *test_sample = (Sample *)malloc(test_sample_count * sizeof(Sample));
 	memset(test_sample, 0, test_sample_count * sizeof(Sample));
 	test_sample->sample_w = width;
@@ -762,6 +913,16 @@ int test_sample() {
 	test_sample->sample_count = test_sample_count;
 	read_mnist_data(test_sample, "./mnist/t10k-images.idx3-ubyte");
 	read_mnist_label(test_sample, "./mnist/t10k-labels.idx1-ubyte");
+#else
+	int test_sample_count = 10;
+	Sample* test_sample = (Sample*)malloc(test_sample_count * sizeof(Sample));
+	memset(test_sample, 0, test_sample_count * sizeof(Sample));
+	test_sample->sample_w = width;
+	test_sample->sample_h = height;
+	test_sample->sample_count = test_sample_count;
+	//traverseImage(test_sample, "./digit/handwriting_1/", 1);
+	traverseImage(test_sample, "./digit/handwriting_2/", 2);
+#endif
 
 	INT i, j, k;
 
@@ -944,9 +1105,13 @@ int test_sample() {
 		nets.setLearningRate(0.03);
 
 		start = clock();
+#ifdef USING_MNIST_DATA
 		//nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.1);
 		nets.TrainCNN(train_sample, 300, sample_size, in_size, out_size, 0.0001, 3, 10, 0);
 		//nets.TrainCNN(train_sample, 10, 100, in_size, out_size, 0.0001, 3, 10);
+#else
+		nets.TrainCNN(train_sample, 80, sample_size, in_size, out_size, 0.0001, 3, 10, 1000);
+#endif
 		end = clock();
 		printf("\ntime=%f\n", (double)(end - start) / CLK_TCK);
 

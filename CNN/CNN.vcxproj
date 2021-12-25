@@ -49,7 +49,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -111,6 +111,7 @@
       <FloatingPointModel>Strict</FloatingPointModel>
       <FloatingPointExceptions>true</FloatingPointExceptions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>ljpeg/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +145,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>_CIFAR_FULL_DATA_;_NANO_CNN_;_NANO_CIFAR_;WIN64;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>ljpeg/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -165,13 +167,83 @@
     <ClInclude Include="NN\Convolute.h" />
     <ClInclude Include="platform\ELibrary.h" />
     <ClInclude Include="platform\EPaint.h" />
+    <ClInclude Include="platform\EPaintEx.h" />
     <ClInclude Include="platform\EPoint.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CNN.cpp" />
     <ClCompile Include="common\MultiLinkList.cpp" />
+    <ClCompile Include="ljpeg\cdjpeg.c" />
+    <ClCompile Include="ljpeg\jaricom.c" />
+    <ClCompile Include="ljpeg\jcapimin.c" />
+    <ClCompile Include="ljpeg\jcapistd.c" />
+    <ClCompile Include="ljpeg\jcarith.c" />
+    <ClCompile Include="ljpeg\jccoefct.c" />
+    <ClCompile Include="ljpeg\jccolor.c" />
+    <ClCompile Include="ljpeg\jcdctmgr.c" />
+    <ClCompile Include="ljpeg\jchuff.c" />
+    <ClCompile Include="ljpeg\jcicc.c" />
+    <ClCompile Include="ljpeg\jcinit.c" />
+    <ClCompile Include="ljpeg\jcmainct.c" />
+    <ClCompile Include="ljpeg\jcmarker.c" />
+    <ClCompile Include="ljpeg\jcmaster.c" />
+    <ClCompile Include="ljpeg\jcomapi.c" />
+    <ClCompile Include="ljpeg\jcparam.c" />
+    <ClCompile Include="ljpeg\jcphuff.c" />
+    <ClCompile Include="ljpeg\jcprepct.c" />
+    <ClCompile Include="ljpeg\jcsample.c" />
+    <ClCompile Include="ljpeg\jctrans.c" />
+    <ClCompile Include="ljpeg\jdapimin.c" />
+    <ClCompile Include="ljpeg\jdapistd.c" />
+    <ClCompile Include="ljpeg\jdarith.c" />
+    <ClCompile Include="ljpeg\jdatadst-tj.c" />
+    <ClCompile Include="ljpeg\jdatadst.c" />
+    <ClCompile Include="ljpeg\jdatasrc-tj.c" />
+    <ClCompile Include="ljpeg\jdatasrc.c" />
+    <ClCompile Include="ljpeg\jdcoefct.c" />
+    <ClCompile Include="ljpeg\jdcolor.c" />
+    <ClCompile Include="ljpeg\jddctmgr.c" />
+    <ClCompile Include="ljpeg\jdhuff.c" />
+    <ClCompile Include="ljpeg\jdicc.c" />
+    <ClCompile Include="ljpeg\jdinput.c" />
+    <ClCompile Include="ljpeg\jdmainct.c" />
+    <ClCompile Include="ljpeg\jdmarker.c" />
+    <ClCompile Include="ljpeg\jdmaster.c" />
+    <ClCompile Include="ljpeg\jdmerge.c" />
+    <ClCompile Include="ljpeg\jdphuff.c" />
+    <ClCompile Include="ljpeg\jdpostct.c" />
+    <ClCompile Include="ljpeg\jdsample.c" />
+    <ClCompile Include="ljpeg\jdtrans.c" />
+    <ClCompile Include="ljpeg\jerror.c" />
+    <ClCompile Include="ljpeg\jfdctflt.c" />
+    <ClCompile Include="ljpeg\jfdctfst.c" />
+    <ClCompile Include="ljpeg\jfdctint.c" />
+    <ClCompile Include="ljpeg\jidctflt.c" />
+    <ClCompile Include="ljpeg\jidctfst.c" />
+    <ClCompile Include="ljpeg\jidctint.c" />
+    <ClCompile Include="ljpeg\jidctred.c" />
+    <ClCompile Include="ljpeg\jmemmgr.c" />
+    <ClCompile Include="ljpeg\jmemnobs.c" />
+    <ClCompile Include="ljpeg\jquant1.c" />
+    <ClCompile Include="ljpeg\jquant2.c" />
+    <ClCompile Include="ljpeg\jsimd_none.c" />
+    <ClCompile Include="ljpeg\jutils.c" />
+    <ClCompile Include="ljpeg\rdbmp.c" />
+    <ClCompile Include="ljpeg\rdcolmap.c" />
+    <ClCompile Include="ljpeg\rdgif.c" />
+    <ClCompile Include="ljpeg\rdppm.c" />
+    <ClCompile Include="ljpeg\rdswitch.c" />
+    <ClCompile Include="ljpeg\rdtarga.c" />
+    <ClCompile Include="ljpeg\tjutil.c" />
+    <ClCompile Include="ljpeg\transupp.c" />
+    <ClCompile Include="ljpeg\turbojpeg.c" />
+    <ClCompile Include="ljpeg\wrbmp.c" />
+    <ClCompile Include="ljpeg\wrgif.c" />
+    <ClCompile Include="ljpeg\wrppm.c" />
+    <ClCompile Include="ljpeg\wrtarga.c" />
     <ClCompile Include="NN\mt19937ar.cpp" />
     <ClCompile Include="platform\EPaint.cpp" />
+    <ClCompile Include="platform\EPaintEx.cpp" />
     <ClCompile Include="platform\EPoint.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

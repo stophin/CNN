@@ -10,6 +10,7 @@
 
 #include "./EPoint.h"
 #include "ELibrary.h"
+#include "EPaintEx.h"
 
 #ifdef _NANOC_WINDOWS_
 #define DEF_FTCOLOR	BLACK

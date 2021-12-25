@@ -159,7 +159,7 @@ struct ERectF {
 
 #include <math.h>
 
-void changemode(int dir)
+inline void changemode(int dir)
 {
 	static struct termios oldt, newt;
 
@@ -174,7 +174,7 @@ void changemode(int dir)
 		tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
-int kbhit(void)
+inline int kbhit(void)
 {
 	struct timeval tv;
 	fd_set rdfs;
@@ -189,7 +189,7 @@ int kbhit(void)
 	return FD_ISSET(STDIN_FILENO, &rdfs);
 }
 
-int getch(void)
+inline int getch(void)
 {
 	struct termios tm, tm_old;
 	int fd = 0, ch;
@@ -212,10 +212,10 @@ int getch(void)
 	return ch;
 }
 
-int getch_console() {
+inline int getch_console() {
 	return getch();
 }
-int kbhit_console() {
+inline int kbhit_console() {
 	return kbhit();
 }
 #define INT		int
@@ -260,6 +260,46 @@ typedef sem_t HANDLE_MUTEX;
 #define __NANOC_THREAD_MUTEX_LOCK__(hMutex)  sem_wait(&hMutex)
 #define __NANOC_THREAD_MUTEX_UNLOCK__(hMutex) sem_post(&hMutex)
 #endif
+#define RGBTOBGR(color)         ((((color) & 0xFF) << 16) | (((color) & 0xFF0000) >> 16) | ((color) & 0xFF00FF00))
+#define EGERGB(r, g, b)         ( ((r)<<16) | ((g)<<8) | (b))
+#define EGERGBA(r, g, b, a)     ( ((r)<<16) | ((g)<<8) | (b) | ((a)<<24) )
+#define EGEARGB(a, r, g, b)     ( ((r)<<16) | ((g)<<8) | (b) | ((a)<<24) )
+#define EGEACOLOR(a, color)     ( ((color) & 0xFFFFFF) | ((a)<<24) )
+#define EGECOLORA(color, a)     ( ((color) & 0xFFFFFF) | ((a)<<24) )
+#define EGEGET_R(c)             ( ((c)>>16) & 0xFF )
+#define EGEGET_G(c)             ( ((c)>> 8) & 0xFF )
+#define EGEGET_B(c)             ( ((c)) & 0xFF )
+#define EGEGET_A(c)             ( ((c)>>24) & 0xFF )
+#define EGEGRAY(gray)           ( ((gray)<<16) | ((gray)<<8) | (gray))
+#define EGEGRAYA(gray, a)       ( ((gray)<<16) | ((gray)<<8) | (gray) | ((a)<<24) )
+#define EGEAGRAY(a, gray)       ( ((gray)<<16) | ((gray)<<8) | (gray) | ((a)<<24) )
+typedef unsigned long       DWORD;
+typedef const char* LPCSTR, * PCSTR;
+enum graphics_errors {      /* graphresult error return codes */
+	grOk = 0,
+	grNoInitGraph = -1,
+	grNotDetected = -2,
+	grFileNotFound = -3,
+	grInvalidDriver = -4,
+	grNoLoadMem = -5,
+	grNoScanMem = -6,
+	grNoFloodMem = -7,
+	grFontNotFound = -8,
+	grNoFontMem = -9,
+	grInvalidMode = -10,
+	grError = -11,   /* generic error */
+	grIOerror = -12,
+	grInvalidFont = -13,
+	grInvalidFontNum = -14,
+	grInvalidVersion = -18,
+	grException = 0x10,  /* ege error */
+	grParamError = 0x11,
+	grInvalidRegion = 0x12,
+	grOutOfMemory = 0x13,
+	grNullPointer = 0x14,
+	grAllocError = 0x15,
+	grInvalidMemory = 0xCDCDCDCD,
+};
 #endif
 
 #define ZERO	1e-10
